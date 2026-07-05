@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { ActiveExercisePicker } from "../components/ActiveExercisePicker";
+import { ActiveWorkoutExercise } from "../components/ActiveWorkoutExercise";
+import { ActiveWorkoutHeader } from "../components/ActiveWorkoutHeader";
+import type { SetDraft } from "../components/AddSetForm";
+import type { SetValueDraft } from "../components/WorkoutSetRow";
 import {
   addExercise,
   addSet,
@@ -9,29 +14,13 @@ import {
   updateSet,
 } from "../api/workouts";
 import { useExercises } from "../hooks/useExercises";
+import type { IExercise } from "../types/Exercise";
 import type { IWorkout } from "../types/Workout";
-
-type SetDraft = {
-  reps: string;
-  weight: string;
-};
-
-type SetValueDraft = Partial<SetDraft>;
 
 type SwipeStart = {
   setId: string;
   x: number;
   y: number;
-};
-
-const formatDuration = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  return [hours, minutes, secs]
-    .map((part) => part.toString().padStart(2, "0"))
-    .join(":");
 };
 
 export default function ActiveWorkout() {
@@ -132,13 +121,13 @@ export default function ActiveWorkout() {
     return personalBests;
   }, [workout, workoutHistory]);
 
-  const handleAddExercise = async (
-    exerciseId: string,
-    exerciseName: string,
-  ) => {
+  const handleAddExercise = async (exercise: IExercise) => {
     if (!id) return;
 
-    const updated = await addExercise(id, { exerciseId, exerciseName });
+    const updated = await addExercise(id, {
+      exerciseId: exercise._id,
+      exerciseName: exercise.name,
+    });
     setWorkout(updated);
     setExercisePickerOpen(false);
   };
@@ -284,39 +273,19 @@ export default function ActiveWorkout() {
 
   return (
     <div className="active-workout">
-      <div className="page-header active-workout__header">
-        <button onClick={() => navigate("/")}>Finish</button>
-        <div>
-          <h5>{workout.name}</h5>
-          <span>{formatDuration(elapsedSeconds)}</span>
-        </div>
-      </div>
+      <ActiveWorkoutHeader
+        workoutName={workout.name}
+        elapsedSeconds={elapsedSeconds}
+        onFinish={() => navigate("/")}
+      />
 
-      <div className="section">
-        <button onClick={() => setExercisePickerOpen((open) => !open)}>
-          {exercisePickerOpen ? "Close exercises" : "Add exercise"}
-        </button>
-
-        {exercisePickerOpen && (
-          <div className="exercise-picker">
-            {exercisesLoading ? (
-              <p>Loading exercises...</p>
-            ) : availableExercises.length === 0 ? (
-              <p>No more exercises to add</p>
-            ) : (
-              availableExercises.map((exercise) => (
-                <button
-                  key={exercise._id}
-                  type="button"
-                  onClick={() => handleAddExercise(exercise._id, exercise.name)}
-                >
-                  {exercise.name}
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+      <ActiveExercisePicker
+        exercises={availableExercises}
+        loading={exercisesLoading}
+        open={exercisePickerOpen}
+        onToggle={() => setExercisePickerOpen((open) => !open)}
+        onSelect={handleAddExercise}
+      />
 
       <div className="section">
         {workout.exercises.length === 0 ? (
@@ -328,138 +297,29 @@ export default function ActiveWorkout() {
             const draft = setDrafts[exercise._id] ?? { reps: "", weight: "" };
 
             return (
-              <div key={exercise._id} className="active-exercise">
-                <div className="active-exercise__header">
-                  <h4>{exercise.exerciseName}</h4>
-                  <span>reps</span>
-                  <span>kg</span>
-                </div>
-
-                <div className="set-list">
-                  {exercise.sets.length === 0 ? (
-                    <p>No sets yet</p>
-                  ) : (
-                    exercise.sets.map((set, index) => (
-                      <div
-                        key={set._id}
-                        className={`set-row${deletingSetId === set._id ? " set-row--deleting" : ""}`}
-                        onPointerDown={(event) =>
-                          setSwipeStart({
-                            setId: set._id,
-                            x: event.clientX,
-                            y: event.clientY,
-                          })
-                        }
-                        onPointerUp={(event) =>
-                          handleSwipeEnd(
-                            exercise._id,
-                            set._id,
-                            event.clientX,
-                            event.clientY,
-                          )
-                        }
-                        onPointerCancel={() => setSwipeStart(null)}
-                      >
-                        {(() => {
-                          const valueDraft = setValueDrafts[set._id];
-
-                          return (
-                            <>
-                        <span className="set-row__lead">
-                          <span className="set-row__number">{index + 1}</span>
-                          {personalBestSetIds.has(set._id) && (
-                            <span className="set-row__pb">PB!</span>
-                          )}
-                        </span>
-                        <input
-                          aria-label={`${exercise.exerciseName} set ${index + 1} reps`}
-                          type="number"
-                          min="1"
-                          value={valueDraft?.reps ?? set.reps.toString()}
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onChange={(event) =>
-                            handleSetValueChange(
-                              set._id,
-                              "reps",
-                              event.target.value,
-                            )
-                          }
-                          onBlur={() =>
-                            handleSetValueCommit(
-                              exercise._id,
-                              set._id,
-                              "reps",
-                              valueDraft?.reps ?? set.reps.toString(),
-                            )
-                          }
-                        />
-                        <input
-                          aria-label={`${exercise.exerciseName} set ${index + 1} weight`}
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={valueDraft?.weight ?? set.weight.toString()}
-                          onPointerDown={(event) => event.stopPropagation()}
-                          onChange={(event) =>
-                            handleSetValueChange(
-                              set._id,
-                              "weight",
-                              event.target.value,
-                            )
-                          }
-                          onBlur={() =>
-                            handleSetValueCommit(
-                              exercise._id,
-                              set._id,
-                              "weight",
-                              valueDraft?.weight ?? set.weight.toString(),
-                            )
-                          }
-                        />
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="set-form">
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Reps"
-                    value={draft.reps}
-                    onChange={(event) =>
-                      handleDraftChange(
-                        exercise._id,
-                        "reps",
-                        event.target.value,
-                      )
-                    }
-                  />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    placeholder="Weight"
-                    value={draft.weight}
-                    onChange={(event) =>
-                      handleDraftChange(
-                        exercise._id,
-                        "weight",
-                        event.target.value,
-                      )
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddSet(exercise._id)}
-                  >
-                    Add set
-                  </button>
-                </div>
-              </div>
+              <ActiveWorkoutExercise
+                key={exercise._id}
+                exercise={exercise}
+                setDraft={draft}
+                setValueDrafts={setValueDrafts}
+                deletingSetId={deletingSetId}
+                personalBestSetIds={personalBestSetIds}
+                onSetDraftChange={(field, value) =>
+                  handleDraftChange(exercise._id, field, value)
+                }
+                onAddSet={() => handleAddSet(exercise._id)}
+                onSetValueChange={handleSetValueChange}
+                onSetValueCommit={(setId, field, value) =>
+                  handleSetValueCommit(exercise._id, setId, field, value)
+                }
+                onSwipeStart={(setId, x, y) =>
+                  setSwipeStart({ setId, x, y })
+                }
+                onSwipeEnd={(setId, x, y) =>
+                  handleSwipeEnd(exercise._id, setId, x, y)
+                }
+                onSwipeCancel={() => setSwipeStart(null)}
+              />
             );
           })
         )}
