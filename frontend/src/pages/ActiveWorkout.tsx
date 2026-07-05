@@ -12,6 +12,7 @@ import {
   getWorkout,
   getWorkouts,
   updateSet,
+  updateWorkout,
 } from "../api/workouts";
 import { useExercises } from "../hooks/useExercises";
 import type { IExercise } from "../types/Exercise";
@@ -130,6 +131,24 @@ export default function ActiveWorkout() {
     });
     setWorkout(updated);
     setExercisePickerOpen(false);
+  };
+
+  const handleWorkoutNameChange = (name: string) => {
+    setWorkout((current) => (current ? { ...current, name } : current));
+  };
+
+  const handleWorkoutNameCommit = async (name: string) => {
+    if (!id || !workout) return;
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setWorkout({ ...workout, name: "Workout" });
+      await updateWorkout(id, { name: "Workout" });
+      return;
+    }
+
+    const updated = await updateWorkout(id, { name: trimmedName });
+    setWorkout(updated);
   };
 
   const handleDraftChange = (
@@ -277,6 +296,8 @@ export default function ActiveWorkout() {
         workoutName={workout.name}
         elapsedSeconds={elapsedSeconds}
         onFinish={() => navigate("/")}
+        onWorkoutNameChange={handleWorkoutNameChange}
+        onWorkoutNameCommit={handleWorkoutNameCommit}
       />
 
       <ActiveExercisePicker
