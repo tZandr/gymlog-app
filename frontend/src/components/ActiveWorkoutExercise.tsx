@@ -8,6 +8,7 @@ interface Props {
   setValueDrafts: Record<string, SetValueDraft>;
   deletingSetId: string | null;
   personalBestSetIds: Set<string>;
+  previousBestRepsPerSet: Map<string, number>;
   onSetDraftChange: (field: keyof SetDraft, value: string) => void;
   onAddSet: () => void;
   onSetValueChange: (
@@ -31,6 +32,7 @@ export function ActiveWorkoutExercise({
   setValueDrafts,
   deletingSetId,
   personalBestSetIds,
+  previousBestRepsPerSet,
   onSetDraftChange,
   onAddSet,
   onSetValueChange,
@@ -60,6 +62,7 @@ export function ActiveWorkoutExercise({
               draft={setValueDrafts[set._id]}
               isDeleting={deletingSetId === set._id}
               isPersonalBest={personalBestSetIds.has(set._id)}
+              previousBestReps={previousBestRepsPerSet.get(set._id)}
               onSwipeStart={onSwipeStart}
               onSwipeEnd={onSwipeEnd}
               onSwipeCancel={onSwipeCancel}

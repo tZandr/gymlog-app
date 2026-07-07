@@ -10,6 +10,7 @@ interface Props {
   draft?: SetValueDraft;
   isDeleting: boolean;
   isPersonalBest: boolean;
+  previousBestReps?: number;
   onSwipeStart: (setId: string, x: number, y: number) => void;
   onSwipeEnd: (setId: string, x: number, y: number) => void;
   onSwipeCancel: () => void;
@@ -24,6 +25,7 @@ export function WorkoutSetRow({
   draft,
   isDeleting,
   isPersonalBest,
+  previousBestReps,
   onSwipeStart,
   onSwipeEnd,
   onSwipeCancel,
@@ -45,7 +47,10 @@ export function WorkoutSetRow({
     >
       <span className="set-row__lead">
         <span className="set-row__number">{setNumber}</span>
-        {isPersonalBest && <span className="set-row__pb">PB!</span>}
+        {isPersonalBest
+          ? <span className="set-row__pb">PB!</span>
+          : previousBestReps && <span className="set-row__prev-pb">PB: {previousBestReps}x{set.weight}kg</span>
+        }
       </span>
       <input
         aria-label={`${exerciseName} set ${setNumber} reps`}
