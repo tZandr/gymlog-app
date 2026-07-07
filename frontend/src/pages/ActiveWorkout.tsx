@@ -76,11 +76,12 @@ export default function ActiveWorkout() {
     (exercise) => !addedExerciseIds.has(exercise._id),
   );
 
-  const personalBestSetIds = useMemo(() => {
-    if (!workout) return new Set<string>();
+  const { personalBestSetIds, previousBestRepsPerSet } = useMemo(() => {
+    if (!workout) return { personalBestSetIds: new Set<string>(), previousBestRepsPerSet: new Map<string, number>() };
 
     const bestRepsByExerciseAndWeight = new Map<string, number>();
     const personalBests = new Set<string>();
+    const prevBestReps = new Map<string, number>();
     const previousWorkouts = workoutHistory
       .filter((historyWorkout) => historyWorkout._id !== workout._id)
       .sort(
@@ -115,11 +116,16 @@ export default function ActiveWorkout() {
 
     workout.exercises.forEach((exercise) => {
       exercise.sets.forEach((set) => {
+        const key = `${exercise.exerciseId}:${set.weight}`;
+        const previousBest = bestRepsByExerciseAndWeight.get(key) ?? 0;
+        if (previousBest > 0) {
+          prevBestReps.set(set._id, previousBest);
+        }
         trackSet(exercise.exerciseId, set.weight, set.reps, set._id);
       });
     });
 
-    return personalBests;
+    return { personalBestSetIds: personalBests, previousBestRepsPerSet: prevBestReps };
   }, [workout, workoutHistory]);
 
   const handleAddExercise = async (exercise: IExercise) => {
@@ -300,14 +306,6 @@ export default function ActiveWorkout() {
         onWorkoutNameCommit={handleWorkoutNameCommit}
       />
 
-      <ActiveExercisePicker
-        exercises={availableExercises}
-        loading={exercisesLoading}
-        open={exercisePickerOpen}
-        onToggle={() => setExercisePickerOpen((open) => !open)}
-        onSelect={handleAddExercise}
-      />
-
       <div className="section">
         {workout.exercises.length === 0 ? (
           <div className="empty-state">
@@ -325,6 +323,7 @@ export default function ActiveWorkout() {
                 setValueDrafts={setValueDrafts}
                 deletingSetId={deletingSetId}
                 personalBestSetIds={personalBestSetIds}
+                previousBestRepsPerSet={previousBestRepsPerSet}
                 onSetDraftChange={(field, value) =>
                   handleDraftChange(exercise._id, field, value)
                 }
@@ -345,6 +344,14 @@ export default function ActiveWorkout() {
           })
         )}
       </div>
+
+      <ActiveExercisePicker
+        exercises={availableExercises}
+        loading={exercisesLoading}
+        open={exercisePickerOpen}
+        onToggle={() => setExercisePickerOpen((open) => !open)}
+        onSelect={handleAddExercise}
+      />
     </div>
   );
 }

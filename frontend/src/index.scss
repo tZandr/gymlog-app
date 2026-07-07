@@ -423,6 +423,12 @@ form {
     font-size: 0.75rem;
     font-weight: 700;
   }
+  &__prev-pb {
+    padding: 0rem 0.45rem;
+    color: $text-muted;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
   input {
     width: 4.5rem;
     padding: 0.25rem 0;
@@ -432,6 +438,11 @@ form {
     color: $text-secondary;
     font: inherit;
     text-align: right;
+    appearance: textfield;
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      display: none;
+    }
     &:focus {
       outline: none;
       border-bottom-color: $accent;
