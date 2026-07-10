@@ -21,13 +21,14 @@ nav {
     li {
       font-weight: 500;
       list-style: none;
-      padding: 1.5rem 1.2rem;
-      cursor: pointer;
-      :hover {
-        color: $accent-hover;
-      }
       a {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem 1.2rem;
         color: $text-secondary;
+        &:hover {
+          color: $accent-hover;
+        }
       }
     }
   }
@@ -366,9 +367,10 @@ form {
   gap: 1rem;
   &__header {
     display: grid;
-    grid-template-columns: 1fr 4.5rem 4.5rem;
+    grid-template-columns: 1fr 4.5rem 4.5rem 2.5rem;
     gap: 0.75rem;
     align-items: end;
+    padding: 0 0.75rem;
     h4 {
       margin: 0;
     }
@@ -392,11 +394,12 @@ form {
 
 .set-row {
   display: grid;
-  grid-template-columns: 1fr 4.5rem 4.5rem;
+  grid-template-columns: 1fr 4.5rem 4.5rem 2.5rem;
   gap: 0.75rem;
   align-items: center;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid $border;
+  padding: 0.6rem 0.75rem;
+  background-color: $bg-elevated;
+  border-radius: 8px;
   color: $text-secondary;
   touch-action: pan-y;
   transition:
@@ -413,9 +416,39 @@ form {
     min-width: 0;
   }
   &__number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    background-color: $bg-primary;
+    border-radius: 6px;
     color: $text-primary;
     font-size: 0.8rem;
     font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    &--warmup { color: #f4a261; }
+    &--drop { color: #74b9ff; }
+  }
+  &__complete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: end;
+    width: 1.75rem;
+    height: 1.75rem;
+    background-color: $bg-primary;
+    border-radius: 6px;
+    border: none;
+    padding: 0;
+    color: $text-muted;
+    font-size: 0.9rem;
+    cursor: pointer;
+    &--done {
+      background-color: rgba(#2ecc71, 0.15);
+      color: #2ecc71;
+    }
   }
   &__pb {
     padding: 0rem 0.45rem;
@@ -451,22 +484,8 @@ form {
   }
 }
 
-.set-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 0.5rem;
-  input {
-    min-width: 0;
-    padding: 0.7rem;
-    background-color: $bg-elevated;
-    border: 1px solid $border;
-    border-radius: 8px;
-    color: $text-primary;
-    font-family: inherit;
-    font-size: 0.9rem;
-    &:focus {
-      outline: none;
-      border-color: $accent;
-    }
-  }
+.set-form__btn {
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.85rem;
 }

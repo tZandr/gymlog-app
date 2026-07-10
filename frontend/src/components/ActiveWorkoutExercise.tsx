@@ -1,15 +1,15 @@
 import type { IWorkoutExercise } from "../types/Workout";
-import { AddSetForm, type SetDraft } from "./AddSetForm";
-import { WorkoutSetRow, type SetValueDraft } from "./WorkoutSetRow";
+import { AddSetForm } from "./AddSetForm";
+import { WorkoutSetRow, type SetValueDraft, type SetType } from "./WorkoutSetRow";
 
 interface Props {
   exercise: IWorkoutExercise;
-  setDraft: SetDraft;
   setValueDrafts: Record<string, SetValueDraft>;
   deletingSetId: string | null;
   personalBestSetIds: Set<string>;
   previousBestRepsPerSet: Map<string, number>;
-  onSetDraftChange: (field: keyof SetDraft, value: string) => void;
+  setTypes: Record<string, SetType>;
+  completedSetIds: Set<string>;
   onAddSet: () => void;
   onSetValueChange: (
     setId: string,
@@ -24,22 +24,26 @@ interface Props {
   onSwipeStart: (setId: string, x: number, y: number) => void;
   onSwipeEnd: (setId: string, x: number, y: number) => void;
   onSwipeCancel: () => void;
+  onCycleSetType: (setId: string) => void;
+  onToggleComplete: (setId: string) => void;
 }
 
 export function ActiveWorkoutExercise({
   exercise,
-  setDraft,
   setValueDrafts,
   deletingSetId,
   personalBestSetIds,
   previousBestRepsPerSet,
-  onSetDraftChange,
+  setTypes,
+  completedSetIds,
   onAddSet,
   onSetValueChange,
   onSetValueCommit,
   onSwipeStart,
   onSwipeEnd,
   onSwipeCancel,
+  onCycleSetType,
+  onToggleComplete,
 }: Props) {
   return (
     <div className="active-exercise">
@@ -47,6 +51,7 @@ export function ActiveWorkoutExercise({
         <h4>{exercise.exerciseName}</h4>
         <span>reps</span>
         <span>kg</span>
+        <span>done</span>
       </div>
 
       <div className="set-list">
@@ -63,21 +68,21 @@ export function ActiveWorkoutExercise({
               isDeleting={deletingSetId === set._id}
               isPersonalBest={personalBestSetIds.has(set._id)}
               previousBestReps={previousBestRepsPerSet.get(set._id)}
+              setType={setTypes[set._id] ?? "normal"}
+              isComplete={completedSetIds.has(set._id)}
               onSwipeStart={onSwipeStart}
               onSwipeEnd={onSwipeEnd}
               onSwipeCancel={onSwipeCancel}
               onValueChange={onSetValueChange}
               onValueCommit={onSetValueCommit}
+              onCycleSetType={onCycleSetType}
+              onToggleComplete={onToggleComplete}
             />
           ))
         )}
       </div>
 
-      <AddSetForm
-        draft={setDraft}
-        onChange={onSetDraftChange}
-        onAddSet={onAddSet}
-      />
+      <AddSetForm onAddSet={onAddSet} />
     </div>
   );
 }

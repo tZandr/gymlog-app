@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ActiveExercisePicker } from "../components/ActiveExercisePicker";
 import { ActiveWorkoutExercise } from "../components/ActiveWorkoutExercise";
 import { ActiveWorkoutHeader } from "../components/ActiveWorkoutHeader";
-import type { SetDraft } from "../components/AddSetForm";
+
 import type { SetValueDraft } from "../components/WorkoutSetRow";
 import {
   addExercise,
@@ -16,7 +16,8 @@ import {
 } from "../api/workouts";
 import { useExercises } from "../hooks/useExercises";
 import type { IExercise } from "../types/Exercise";
-import type { IWorkout } from "../types/Workout";
+import type { IWorkout, IWorkoutExercise } from "../types/Workout";
+import type { SetType } from "../components/WorkoutSetRow";
 
 type SwipeStart = {
   setId: string;
@@ -31,8 +32,10 @@ export default function ActiveWorkout() {
   const [workout, setWorkout] = useState<IWorkout | null>(null);
   const [loading, setLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const [setTypes, setSetTypes] = useState<Record<string, SetType>>({});
+  const [completedSetIds, setCompletedSetIds] = useState<Set<string>>(new Set());
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
-  const [setDrafts, setSetDrafts] = useState<Record<string, SetDraft>>({});
   const [setValueDrafts, setSetValueDrafts] = useState<
     Record<string, SetValueDraft>
   >({});
@@ -52,7 +55,7 @@ export default function ActiveWorkout() {
   }, [id]);
 
   useEffect(() => {
-    if (!workout?.date) return;
+    if (!workout?.date || finished) return;
 
     const startedAt = new Date(workout.date).getTime();
     const updateElapsed = () => {
@@ -64,7 +67,7 @@ export default function ActiveWorkout() {
     updateElapsed();
     const timer = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(timer);
-  }, [workout?.date]);
+  }, [workout?.date, finished]);
 
   const addedExerciseIds = useMemo(
     () =>
@@ -157,43 +160,15 @@ export default function ActiveWorkout() {
     setWorkout(updated);
   };
 
-  const handleDraftChange = (
-    exerciseId: string,
-    field: keyof SetDraft,
-    value: string,
-  ) => {
-    setSetDrafts((drafts) => ({
-      ...drafts,
-      [exerciseId]: {
-        reps: drafts[exerciseId]?.reps ?? "",
-        weight: drafts[exerciseId]?.weight ?? "",
-        [field]: value,
-      },
-    }));
-  };
-
-  const handleAddSet = async (exerciseId: string) => {
+  const handleAddSet = async (exercise: IWorkoutExercise) => {
     if (!id) return;
 
-    const draft = setDrafts[exerciseId];
-    const reps = Number(draft?.reps);
-    const weight = Number(draft?.weight);
+    const lastSet = exercise.sets[exercise.sets.length - 1];
+    const reps = lastSet?.reps ?? 1;
+    const weight = lastSet?.weight ?? 0;
 
-    if (
-      !Number.isFinite(reps) ||
-      !Number.isFinite(weight) ||
-      reps <= 0 ||
-      weight < 0
-    ) {
-      return;
-    }
-
-    const updated = await addSet(id, exerciseId, { reps, weight });
+    const updated = await addSet(id, exercise._id, { reps, weight });
     setWorkout(updated);
-    setSetDrafts((drafts) => ({
-      ...drafts,
-      [exerciseId]: { reps: "", weight: "" },
-    }));
   };
 
   const handleSetValueChange = (
@@ -266,6 +241,24 @@ export default function ActiveWorkout() {
     }
   };
 
+  const handleCycleSetType = (setId: string) => {
+    setSetTypes((prev) => {
+      const current = prev[setId] ?? "normal";
+      const next: SetType =
+        current === "normal" ? "warmup" : current === "warmup" ? "drop" : "normal";
+      return { ...prev, [setId]: next };
+    });
+  };
+
+  const handleToggleComplete = (setId: string) => {
+    setCompletedSetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(setId)) next.delete(setId);
+      else next.add(setId);
+      return next;
+    });
+  };
+
   const handleSwipeEnd = (
     exerciseId: string,
     setId: string,
@@ -301,7 +294,7 @@ export default function ActiveWorkout() {
       <ActiveWorkoutHeader
         workoutName={workout.name}
         elapsedSeconds={elapsedSeconds}
-        onFinish={() => navigate("/")}
+        onFinish={() => { setFinished(true); navigate("/"); }}
         onWorkoutNameChange={handleWorkoutNameChange}
         onWorkoutNameCommit={handleWorkoutNameCommit}
       />
@@ -313,21 +306,19 @@ export default function ActiveWorkout() {
           </div>
         ) : (
           workout.exercises.map((exercise) => {
-            const draft = setDrafts[exercise._id] ?? { reps: "", weight: "" };
-
             return (
               <ActiveWorkoutExercise
                 key={exercise._id}
                 exercise={exercise}
-                setDraft={draft}
                 setValueDrafts={setValueDrafts}
                 deletingSetId={deletingSetId}
                 personalBestSetIds={personalBestSetIds}
                 previousBestRepsPerSet={previousBestRepsPerSet}
-                onSetDraftChange={(field, value) =>
-                  handleDraftChange(exercise._id, field, value)
-                }
-                onAddSet={() => handleAddSet(exercise._id)}
+                setTypes={setTypes}
+                completedSetIds={completedSetIds}
+                onCycleSetType={handleCycleSetType}
+                onToggleComplete={handleToggleComplete}
+                onAddSet={() => handleAddSet(exercise)}
                 onSetValueChange={handleSetValueChange}
                 onSetValueCommit={(setId, field, value) =>
                   handleSetValueCommit(exercise._id, setId, field, value)
