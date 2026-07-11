@@ -65,8 +65,10 @@ export function WorkoutSetRow({
           {typeLabel}
         </span>
         {isPersonalBest
-          ? <span className="set-row__pb">PB!</span>
-          : previousBestReps && <span className="set-row__prev-pb">PB: {previousBestReps}x{set.weight}kg</span>
+          ? <span className="set-row__pb">NEW PB!</span>
+          : previousBestReps
+            ? <span className="set-row__prev-pb">{previousBestReps} x {set.weight}kg</span>
+            : null
         }
       </span>
       <input

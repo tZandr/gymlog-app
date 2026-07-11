@@ -49,9 +49,15 @@ export function ActiveWorkoutExercise({
     <div className="active-exercise">
       <div className="active-exercise__header">
         <h4>{exercise.exerciseName}</h4>
-        <span>reps</span>
-        <span>kg</span>
-        <span>done</span>
+        <div className="active-exercise__col-labels">
+          <span className="active-exercise__col-labels__lead">
+            <span>set</span>
+            <span>pb</span>
+          </span>
+          <span>reps</span>
+          <span>kg</span>
+          <span>done</span>
+        </div>
       </div>
 
       <div className="set-list">
