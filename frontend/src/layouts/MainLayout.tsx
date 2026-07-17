@@ -1,11 +1,20 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
+import { ActiveWorkoutBanner } from '../components/ActiveWorkoutBanner';
+import { useActiveWorkout } from '../context/ActiveWorkoutContext';
 
 export default function MainLayout() {
+  const { activeWorkoutId } = useActiveWorkout();
+  const location = useLocation();
+  const isOnActiveWorkout = activeWorkoutId && location.pathname === `/workouts/${activeWorkoutId}`;
+
   return (
     <div id="content">
       <Outlet />
-      <Navbar />
+      <div id="bottom-bar">
+        {!isOnActiveWorkout && <ActiveWorkoutBanner />}
+        <Navbar />
+      </div>
     </div>
   );
 }

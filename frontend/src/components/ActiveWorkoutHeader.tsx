@@ -1,3 +1,5 @@
+import { FaChevronDown } from "react-icons/fa";
+
 const formatDuration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -11,7 +13,7 @@ const formatDuration = (seconds: number) => {
 interface Props {
   workoutName: string;
   elapsedSeconds: number;
-  onFinish: () => void;
+  onMinimize: () => void;
   onWorkoutNameChange: (name: string) => void;
   onWorkoutNameCommit: (name: string) => void;
 }
@@ -19,13 +21,15 @@ interface Props {
 export function ActiveWorkoutHeader({
   workoutName,
   elapsedSeconds,
-  onFinish,
+  onMinimize,
   onWorkoutNameChange,
   onWorkoutNameCommit,
 }: Props) {
   return (
     <div className="page-header active-workout__header">
-      <button onClick={onFinish}>Finish</button>
+      <button className="active-workout__minimize-btn" onClick={onMinimize}>
+        <FaChevronDown />
+      </button>
       <div>
         <input
           aria-label="Workout name"

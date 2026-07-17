@@ -13,9 +13,9 @@ body {
 #content {
   max-width: $max-width;
   margin: 0 auto;
-  padding: 0 $content-padding;
+  padding: 0 $content-padding 7rem;
   background-color: $bg-primary;
   color: $text-primary;
   font-family: $main-font;
-  height: 100vh;
+  min-height: 100vh;
 }

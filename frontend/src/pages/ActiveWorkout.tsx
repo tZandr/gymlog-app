@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ActiveExercisePicker } from "../components/ActiveExercisePicker";
 import { ActiveWorkoutExercise } from "../components/ActiveWorkoutExercise";
 import { ActiveWorkoutHeader } from "../components/ActiveWorkoutHeader";
+import { FinishWorkoutModal } from "../components/FinishWorkoutModal";
+import { useActiveWorkout } from "../context/ActiveWorkoutContext";
 
 import type { SetValueDraft } from "../components/WorkoutSetRow";
 import {
@@ -10,6 +12,7 @@ import {
   addSet,
   deleteSet,
   deleteExercise as removeExerciseFromWorkout,
+  deleteWorkout,
   getWorkout,
   getWorkouts,
   updateSet,
@@ -29,6 +32,7 @@ type SwipeStart = {
 export default function ActiveWorkout() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { setActiveWorkout, clearActiveWorkout } = useActiveWorkout();
   const { exercises, loading: exercisesLoading } = useExercises();
   const [workout, setWorkout] = useState<IWorkout | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +41,8 @@ export default function ActiveWorkout() {
   const [setTypes, setSetTypes] = useState<Record<string, SetType>>({});
   const [completedSetIds, setCompletedSetIds] = useState<Set<string>>(new Set());
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [setValueDrafts, setSetValueDrafts] = useState<
     Record<string, SetValueDraft>
   >({});
@@ -54,6 +60,11 @@ export default function ActiveWorkout() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !workout) return;
+    setActiveWorkout(id, workout.name, workout.date);
+  }, [id, workout?._id, workout?.name, workout?.date, setActiveWorkout]);
 
   useEffect(() => {
     if (!workout?.date) return;
@@ -317,6 +328,27 @@ export default function ActiveWorkout() {
     });
   };
 
+  const handleMinimize = () => {
+    setLeaving(true);
+    setTimeout(() => navigate("/"), 350);
+  };
+
+  const handleDiscardWorkout = async () => {
+    if (!id) return;
+    if (timerRef.current !== null) window.clearInterval(timerRef.current);
+    await deleteWorkout(id);
+    clearActiveWorkout();
+    navigate("/");
+  };
+
+  const handleFinishWorkout = async (rating: number, saveAsTemplate: boolean) => {
+    if (!id) return;
+    if (timerRef.current !== null) window.clearInterval(timerRef.current);
+    await updateWorkout(id, { rating, isTemplate: saveAsTemplate, durationSeconds: elapsedSeconds });
+    clearActiveWorkout();
+    navigate("/");
+  };
+
   const handleSwipeEnd = (
     exerciseId: string,
     setId: string,
@@ -348,17 +380,22 @@ export default function ActiveWorkout() {
   }
 
   return (
-    <div className="active-workout">
+    <div className={`active-workout${leaving ? " active-workout--leaving" : ""}`}>
       <ActiveWorkoutHeader
         workoutName={workout.name}
         elapsedSeconds={elapsedSeconds}
-        onFinish={() => {
-          if (timerRef.current !== null) window.clearInterval(timerRef.current);
-          navigate("/");
-        }}
+        onMinimize={handleMinimize}
         onWorkoutNameChange={handleWorkoutNameChange}
         onWorkoutNameCommit={handleWorkoutNameCommit}
       />
+
+      {showFinishModal && (
+        <FinishWorkoutModal
+          onFinish={handleFinishWorkout}
+          onCancel={() => setShowFinishModal(false)}
+          onDiscard={handleDiscardWorkout}
+        />
+      )}
 
       <div className="section">
         {workout.exercises.length === 0 ? (
@@ -410,6 +447,12 @@ export default function ActiveWorkout() {
         onToggle={() => setExercisePickerOpen((open) => !open)}
         onSelect={handleAddExercise}
       />
+
+      <div className="active-workout__bottom-actions">
+        <button type="button" className="btn-success" onClick={() => setShowFinishModal(true)}>
+          Finish Workout
+        </button>
+      </div>
     </div>
   );
 }
