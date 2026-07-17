@@ -4,16 +4,21 @@
 @use "sass:map";
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
 
-// - Navbar
+// - Bottom bar (navbar + workout banner)
 
-nav {
+#bottom-bar {
   position: fixed;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: $max-width;
+  z-index: 50;
+}
+
+nav {
   border-top: 1px solid $border;
+  background-color: $bg-primary;
   ul {
     display: flex;
     justify-content: center;
@@ -31,6 +36,32 @@ nav {
         }
       }
     }
+  }
+}
+
+// - Workout banner (minimized active workout)
+
+.workout-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background-color: $bg-elevated;
+  border-top: 1px solid $border;
+  cursor: pointer;
+  &:hover {
+    background-color: $bg-surface;
+  }
+  &__name {
+    color: $text-primary;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  &__timer {
+    color: $accent;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -243,7 +274,6 @@ form {
     max-width: 400px;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
     &__header {
       display: flex;
       justify-content: space-between;
@@ -311,8 +341,34 @@ form {
 
 // - Active workout
 
+@keyframes workout-slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes workout-slide-down {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+
 .active-workout {
-  padding-bottom: 5rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: $max-width;
+  height: 100dvh;
+  overflow-y: auto;
+  background: $bg-primary;
+  color: $text-primary;
+  z-index: 40;
+  padding: 0 $content-padding 7rem;
+  animation: workout-slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) both;
+  &--leaving {
+    animation: workout-slide-down 0.35s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
   &__header {
     justify-content: space-between;
     gap: 1rem;
@@ -333,6 +389,21 @@ form {
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+  }
+  &__minimize-btn {
+    background: none;
+    border: none;
+    color: $text-secondary;
+    font-size: 1.1rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    &:hover { color: $text-primary; border: none; }
+  }
+  &__bottom-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
   }
   &__name-input {
     width: min(14rem, 55vw);
@@ -586,4 +657,336 @@ form {
 .exercise-picker-trigger {
   width: 100%;
   margin-top: 1rem;
+}
+
+// - History cards
+
+.history-card {
+  @extend %card;
+  cursor: pointer;
+  &:hover { border-color: $accent; }
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+  }
+  &__name {
+    font-weight: 600;
+    color: $text-primary;
+  }
+  &__date {
+    color: $text-muted;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+  &__meta {
+    display: flex;
+    gap: 1rem;
+    color: $text-secondary;
+    font-size: 0.85rem;
+  }
+  &__rating {
+    margin-left: auto;
+    color: $text-muted;
+    font-size: 0.8rem;
+  }
+  &__template-tag {
+    color: $accent;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+}
+
+// - Workout detail modal
+
+.workout-detail-modal {
+  padding: 0;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+    &--edit {
+      align-items: center;
+      justify-content: space-between;
+      .workout-detail-modal__name-input {
+        flex: 1;
+        text-align: center;
+      }
+    }
+  }
+  &__back-btn {
+    background: none;
+    border: none;
+    color: $text-secondary;
+    font-size: 0.9rem;
+    padding: 0.25rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    &:hover { color: $text-primary; border: none; }
+  }
+  &__save-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  &__title-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  &__name {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  &__meta {
+    color: $text-muted;
+    font-size: 0.8rem;
+  }
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    button { padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+  }
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  &__empty {
+    color: $text-muted;
+    font-size: 0.9rem;
+  }
+  &__exercise {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  &__exercise-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-secondary;
+  }
+  &__sets {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  &__set {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  &__set-num {
+    width: 1.25rem;
+    text-align: center;
+    color: $text-muted;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  &__set-value {
+    color: $text-primary;
+    font-size: 0.85rem;
+  }
+  &__set-sep {
+    color: $text-muted;
+    font-size: 0.85rem;
+  }
+  &__set-unit {
+    color: $text-secondary;
+    font-size: 0.85rem;
+  }
+  &__set-input {
+    width: 3rem;
+    padding: 0.2rem 0.35rem;
+    background: $bg-elevated;
+    border: 1px solid $border;
+    border-radius: 4px;
+    color: $text-primary;
+    font-size: 0.85rem;
+    font-family: inherit;
+    text-align: center;
+    appearance: textfield;
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button { display: none; }
+    &:focus { outline: none; border-color: $accent; }
+  }
+  &__remove-set {
+    background: none;
+    border: none;
+    color: $text-muted;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.2rem;
+    margin-left: auto;
+    &:hover { color: $accent; border: none; }
+  }
+  &__add-set {
+    background: none;
+    border: 1px dashed $border;
+    border-radius: 6px;
+    color: $text-muted;
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.3rem 0.6rem;
+    text-align: left;
+    width: 100%;
+    font-weight: 400;
+    &:hover { border-color: $accent; color: $accent; }
+  }
+  &__name-input {
+    width: 100%;
+    padding: 0.1rem 0;
+    border: 0;
+    border-bottom: 1px solid $accent;
+    background: transparent;
+    color: $text-primary;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: inherit;
+    &:focus { outline: none; }
+  }
+  &__rating-edit {
+    margin-top: 0;
+  }
+  &__feeling {
+    color: $text-muted;
+    font-size: 0.75rem;
+  }
+  &__train-again {
+    display: block;
+    margin: 0.75rem auto 0.25rem;
+    padding: 0.5rem 1.75rem;
+    background: rgba($text-primary, 0.05);
+    border: 1px solid rgba($text-primary, 0.15);
+    border-radius: 999px;
+    color: $text-secondary;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    &:hover {
+      background: rgba($text-primary, 0.1);
+      border-color: rgba($text-primary, 0.3);
+      color: $text-primary;
+    }
+  }
+}
+
+// - Finish workout modal
+
+.finish-modal {
+  &__ratings {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.4rem;
+  }
+  &__rating {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.25rem;
+    background: $bg-surface;
+    border: 1px solid $border;
+    border-radius: 8px;
+    cursor: pointer;
+    &--selected {
+      border-color: $accent;
+      background: rgba($accent, 0.1);
+    }
+  }
+  &__num {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    color: $text-primary;
+  }
+  &__label {
+    font-size: 0.7rem;
+    color: $text-muted;
+    font-weight: 500;
+  }
+  &__template-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: $text-secondary;
+  }
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  &__discard-warning {
+    font-size: 0.85rem;
+    color: $text-secondary;
+    line-height: 1.5;
+  }
+  &__discard-link {
+    background: none;
+    border: none;
+    color: $text-muted;
+    font-size: 0.8rem;
+    font-weight: 400;
+    cursor: pointer;
+    padding: 0.25rem;
+    text-decoration: underline;
+    &:hover { color: $accent; border: none; }
+  }
+}
+
+// - Toggle switch
+
+.toggle {
+  position: relative;
+  width: 2.75rem;
+  height: 1.5rem;
+  padding: 0;
+  border-radius: 999px;
+  background: $bg-surface;
+  border: 1px solid $border;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    transform: translateY(-50%);
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: $text-muted;
+    transition: left 0.2s, background 0.2s;
+  }
+  &--on {
+    background: rgba($accent, 0.15);
+    border-color: $accent;
+    &::after {
+      left: calc(100% - 1rem - 3px);
+      background: $accent;
+    }
+  }
+  &:hover { border-color: $accent; }
 }
