@@ -43,16 +43,13 @@ export default function Home() {
         <h3>Saved Workouts</h3>
         {loading ? (
           <p>Loading...</p>
-        ) : workouts.length === 0 ? (
+        ) : workouts.filter((w) => w.isTemplate).length === 0 ? (
           <div className="empty-state">
-            <p>No workouts saved yet</p>
-            <button onClick={startWorkout} disabled={starting}>
-              {starting ? 'Starting...' : 'Start your first workout'}
-            </button>
+            <p>No templates saved yet. Toggle "Save as template" when finishing a workout.</p>
           </div>
         ) : (
           <div className="workout-list">
-            {workouts.map((workout) => (
+            {workouts.filter((w) => w.isTemplate).map((workout) => (
               <WorkoutCard key={workout._id} workout={workout} />
             ))}
           </div>
