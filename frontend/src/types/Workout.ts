@@ -18,4 +18,7 @@ export interface IWorkout {
   date: string;
   notes: string;
   exercises: IWorkoutExercise[];
+  rating?: number;
+  isTemplate?: boolean;
+  durationSeconds?: number;
 }

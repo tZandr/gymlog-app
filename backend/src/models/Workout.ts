@@ -19,6 +19,9 @@ export interface IWorkout {
   date: string;
   notes: string;
   exercises: IWorkoutExercise[];
+  rating?: number;
+  isTemplate?: boolean;
+  durationSeconds?: number;
 }
 
 const setSchema = new Schema<ISet>({
@@ -39,6 +42,9 @@ const workoutSchema = new Schema<IWorkout>(
     date: { type: String, required: true },
     notes: { type: String },
     exercises: [workoutExerciseSchema],
+    rating: { type: Number },
+    isTemplate: { type: Boolean },
+    durationSeconds: { type: Number },
   },
   { timestamps: true },
 );
