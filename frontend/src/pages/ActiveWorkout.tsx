@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ActiveExercisePicker } from "../components/ActiveExercisePicker";
 import { ActiveWorkoutExercise } from "../components/ActiveWorkoutExercise";
@@ -9,6 +9,7 @@ import {
   addExercise,
   addSet,
   deleteSet,
+  deleteExercise as removeExerciseFromWorkout,
   getWorkout,
   getWorkouts,
   updateSet,
@@ -32,7 +33,7 @@ export default function ActiveWorkout() {
   const [workout, setWorkout] = useState<IWorkout | null>(null);
   const [loading, setLoading] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [finished, setFinished] = useState(false);
+  const timerRef = useRef<number | null>(null);
   const [setTypes, setSetTypes] = useState<Record<string, SetType>>({});
   const [completedSetIds, setCompletedSetIds] = useState<Set<string>>(new Set());
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
@@ -55,7 +56,7 @@ export default function ActiveWorkout() {
   }, [id]);
 
   useEffect(() => {
-    if (!workout?.date || finished) return;
+    if (!workout?.date) return;
 
     const startedAt = new Date(workout.date).getTime();
     const updateElapsed = () => {
@@ -65,9 +66,11 @@ export default function ActiveWorkout() {
     };
 
     updateElapsed();
-    const timer = window.setInterval(updateElapsed, 1000);
-    return () => window.clearInterval(timer);
-  }, [workout?.date, finished]);
+    timerRef.current = window.setInterval(updateElapsed, 1000);
+    return () => {
+      if (timerRef.current !== null) window.clearInterval(timerRef.current);
+    };
+  }, [workout?.date]);
 
   const addedExerciseIds = useMemo(
     () =>
@@ -78,6 +81,21 @@ export default function ActiveWorkout() {
   const availableExercises = exercises.filter(
     (exercise) => !addedExerciseIds.has(exercise._id),
   );
+
+  const exercisePbs = useMemo(() => {
+    const pbs = new Map<string, { reps: number; weight: number }>();
+    workoutHistory.forEach((w) => {
+      w.exercises.forEach((ex) => {
+        ex.sets.forEach((set) => {
+          const current = pbs.get(ex.exerciseId);
+          if (!current || set.weight > current.weight || (set.weight === current.weight && set.reps > current.reps)) {
+            pbs.set(ex.exerciseId, { reps: set.reps, weight: set.weight });
+          }
+        });
+      });
+    });
+    return pbs;
+  }, [workoutHistory]);
 
   const { personalBestSetIds, previousBestRepsPerSet } = useMemo(() => {
     if (!workout) return { personalBestSetIds: new Set<string>(), previousBestRepsPerSet: new Map<string, number>() };
@@ -131,6 +149,40 @@ export default function ActiveWorkout() {
     return { personalBestSetIds: personalBests, previousBestRepsPerSet: prevBestReps };
   }, [workout, workoutHistory]);
 
+  const handleRemoveExercise = async (workoutExerciseId: string) => {
+    if (!id) return;
+    await removeExerciseFromWorkout(id, workoutExerciseId);
+    setWorkout((current) =>
+      current
+        ? { ...current, exercises: current.exercises.filter((e) => e._id !== workoutExerciseId) }
+        : current,
+    );
+  };
+
+  const handleChangeExercise = async (workoutExercise: IWorkoutExercise, newExercise: IExercise) => {
+    if (!id) return;
+    await removeExerciseFromWorkout(id, workoutExercise._id);
+    const updated = await addExercise(id, { exerciseId: newExercise._id, exerciseName: newExercise.name });
+    const newWorkoutExercise = updated.exercises.find((e) => e.exerciseId === newExercise._id);
+    const withSet = newWorkoutExercise
+      ? await addSet(id, newWorkoutExercise._id, { reps: 1, weight: 0 })
+      : updated;
+    setWorkout(withSet);
+  };
+
+  const handleExerciseUpdated = (workoutExerciseId: string, updated: IExercise) => {
+    setWorkout((current) =>
+      current
+        ? {
+            ...current,
+            exercises: current.exercises.map((e) =>
+              e._id === workoutExerciseId ? { ...e, exerciseName: updated.name } : e,
+            ),
+          }
+        : current,
+    );
+  };
+
   const handleAddExercise = async (exercise: IExercise) => {
     if (!id) return;
 
@@ -138,7 +190,13 @@ export default function ActiveWorkout() {
       exerciseId: exercise._id,
       exerciseName: exercise.name,
     });
-    setWorkout(updated);
+
+    const newExercise = updated.exercises.find(e => e.exerciseId === exercise._id);
+    const withSet = newExercise
+      ? await addSet(id, newExercise._id, { reps: 0, weight: 0 })
+      : updated;
+
+    setWorkout(withSet);
     setExercisePickerOpen(false);
   };
 
@@ -294,7 +352,10 @@ export default function ActiveWorkout() {
       <ActiveWorkoutHeader
         workoutName={workout.name}
         elapsedSeconds={elapsedSeconds}
-        onFinish={() => { setFinished(true); navigate("/"); }}
+        onFinish={() => {
+          if (timerRef.current !== null) window.clearInterval(timerRef.current);
+          navigate("/");
+        }}
         onWorkoutNameChange={handleWorkoutNameChange}
         onWorkoutNameCommit={handleWorkoutNameCommit}
       />
@@ -319,6 +380,11 @@ export default function ActiveWorkout() {
                 onCycleSetType={handleCycleSetType}
                 onToggleComplete={handleToggleComplete}
                 onAddSet={() => handleAddSet(exercise)}
+                fullExercise={exercises.find((e) => e._id === exercise.exerciseId)}
+                changeExercises={availableExercises}
+                onRemoveExercise={() => handleRemoveExercise(exercise._id)}
+                onChangeExercise={(newExercise) => handleChangeExercise(exercise, newExercise)}
+                onExerciseUpdated={(updated) => handleExerciseUpdated(exercise._id, updated)}
                 onSetValueChange={handleSetValueChange}
                 onSetValueCommit={(setId, field, value) =>
                   handleSetValueCommit(exercise._id, setId, field, value)
@@ -340,6 +406,7 @@ export default function ActiveWorkout() {
         exercises={availableExercises}
         loading={exercisesLoading}
         open={exercisePickerOpen}
+        exercisePbs={exercisePbs}
         onToggle={() => setExercisePickerOpen((open) => !open)}
         onSelect={handleAddExercise}
       />
