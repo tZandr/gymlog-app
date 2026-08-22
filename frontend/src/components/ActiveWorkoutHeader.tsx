@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
+import { GymPickerModal } from "./GymPickerModal";
 
 const formatDuration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600);
@@ -13,18 +15,26 @@ const formatDuration = (seconds: number) => {
 interface Props {
   workoutName: string;
   elapsedSeconds: number;
+  gym?: string;
+  knownGyms: string[];
   onMinimize: () => void;
   onWorkoutNameChange: (name: string) => void;
   onWorkoutNameCommit: (name: string) => void;
+  onGymChange: (gym: string) => void;
 }
 
 export function ActiveWorkoutHeader({
   workoutName,
   elapsedSeconds,
+  gym,
+  knownGyms,
   onMinimize,
   onWorkoutNameChange,
   onWorkoutNameCommit,
+  onGymChange,
 }: Props) {
+  const [gymPickerOpen, setGymPickerOpen] = useState(false);
+
   return (
     <div className="page-header active-workout__header">
       <button className="active-workout__minimize-btn" onClick={onMinimize}>
@@ -45,7 +55,21 @@ export function ActiveWorkoutHeader({
           }}
         />
         <span>{formatDuration(elapsedSeconds)}</span>
+        <div className="tag-group">
+          <button type="button" className="tag" onClick={() => setGymPickerOpen(true)}>
+            {gym || "Set gym"}
+          </button>
+        </div>
       </div>
+
+      {gymPickerOpen && (
+        <GymPickerModal
+          gyms={knownGyms}
+          currentGym={gym}
+          onSelect={(newGym) => { onGymChange(newGym); setGymPickerOpen(false); }}
+          onClose={() => setGymPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

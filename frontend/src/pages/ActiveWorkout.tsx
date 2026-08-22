@@ -93,6 +93,22 @@ export default function ActiveWorkout() {
     (exercise) => !addedExerciseIds.has(exercise._id),
   );
 
+  const knownGyms = useMemo(
+    () => Array.from(new Set(workoutHistory.map((w) => w.gym).filter(Boolean))).sort(),
+    [workoutHistory],
+  );
+
+  const gymExerciseIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!workout?.gym) return ids;
+    workoutHistory.forEach((w) => {
+      if (w.gym === workout.gym) {
+        w.exercises.forEach((e) => ids.add(e.exerciseId));
+      }
+    });
+    return ids;
+  }, [workoutHistory, workout]);
+
   const exercisePbs = useMemo(() => {
     const pbs = new Map<string, { reps: number; weight: number }>();
     workoutHistory.forEach((w) => {
@@ -213,6 +229,12 @@ export default function ActiveWorkout() {
 
   const handleWorkoutNameChange = (name: string) => {
     setWorkout((current) => (current ? { ...current, name } : current));
+  };
+
+  const handleGymChange = async (gym: string) => {
+    if (!id) return;
+    const updated = await updateWorkout(id, { gym });
+    setWorkout(updated);
   };
 
   const handleWorkoutNameCommit = async (name: string) => {
@@ -384,9 +406,12 @@ export default function ActiveWorkout() {
       <ActiveWorkoutHeader
         workoutName={workout.name}
         elapsedSeconds={elapsedSeconds}
+        gym={workout.gym}
+        knownGyms={knownGyms}
         onMinimize={handleMinimize}
         onWorkoutNameChange={handleWorkoutNameChange}
         onWorkoutNameCommit={handleWorkoutNameCommit}
+        onGymChange={handleGymChange}
       />
 
       {showFinishModal && (
@@ -446,6 +471,8 @@ export default function ActiveWorkout() {
         exercisePbs={exercisePbs}
         onToggle={() => setExercisePickerOpen((open) => !open)}
         onSelect={handleAddExercise}
+        gym={workout.gym}
+        gymExerciseIds={gymExerciseIds}
       />
 
       <div className="active-workout__bottom-actions">

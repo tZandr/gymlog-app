@@ -1,20 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createWorkout } from '../api/workouts';
 import { useWorkouts } from '../hooks/useWorkouts';
 import { WorkoutCard } from '../components/WorkoutCard';
+import { GymPickerModal } from '../components/GymPickerModal';
 
 export default function Home() {
   const { workouts, loading } = useWorkouts();
   const navigate = useNavigate();
   const [starting, setStarting] = useState(false);
+  const [gymPickerOpen, setGymPickerOpen] = useState(false);
 
-  const startWorkout = async () => {
+  const knownGyms = useMemo(
+    () => Array.from(new Set(workouts.map((w) => w.gym).filter(Boolean))).sort(),
+    [workouts],
+  );
+
+  const startWorkout = async (gym: string) => {
     try {
       setStarting(true);
       const workout = await createWorkout({
         name: 'Workout',
-        gym: '',
+        gym,
         date: new Date().toISOString(),
         notes: '',
         exercises: [],
@@ -22,6 +29,7 @@ export default function Home() {
       navigate(`/workouts/${workout._id}`);
     } finally {
       setStarting(false);
+      setGymPickerOpen(false);
     }
   };
 
@@ -33,12 +41,20 @@ export default function Home() {
       <div>
         <h5>Quick Start</h5>
         <div className="btn-group">
-          <button onClick={startWorkout} disabled={starting}>
+          <button onClick={() => setGymPickerOpen(true)} disabled={starting}>
             {starting ? 'Starting...' : 'Start Workout'}
           </button>
           <button>Create Template</button>
         </div>
       </div>
+
+      {gymPickerOpen && (
+        <GymPickerModal
+          gyms={knownGyms}
+          onSelect={startWorkout}
+          onClose={() => setGymPickerOpen(false)}
+        />
+      )}
       <div className="section">
         <h3>Saved Workouts</h3>
         {loading ? (
