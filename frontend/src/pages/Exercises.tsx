@@ -27,6 +27,7 @@ export default function Exercises() {
         <ExerciseModal
           onClose={() => setCreateOpen(false)}
           onCreated={(exercise) => setExercises((prev) => [...prev, exercise])}
+          exercises={exercises}
         />
       )}
 
@@ -40,6 +41,7 @@ export default function Exercises() {
           onDeleted={(id) =>
             setExercises((prev) => prev.filter((e) => e._id !== id))
           }
+          exercises={exercises}
         />
       )}
     </div>

@@ -6,7 +6,7 @@ const router = express.Router();
 // Create
 router.post('/', async (req, res) => {
   try {
-    const exercise = await Exercise.create(req.body);
+    const exercise = await Exercise.create({ ...req.body, baseExercise: req.body.baseExercise || null });
     res.status(201).json(exercise);
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' });
@@ -35,7 +35,11 @@ router.get('/:id', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const exercise = await Exercise.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const exercise = await Exercise.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body, baseExercise: req.body.baseExercise || null },
+      { new: true },
+    );
     if (!exercise) { res.status(404).json({ message: 'Exercise not found' }); return; }
     res.json(exercise);
   } catch {

@@ -3,4 +3,6 @@ export interface IExercise {
   name: string;
   muscleGroups: string[];
   category: string[];
+  brand?: string;
+  baseExercise?: string | null;
 }
