@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import exercisesRouter from './routes/exercises.js';
 import workoutsRouter from './routes/workouts.js';
 import profileRouter from './routes/profile.js';
-import { uploadRouter } from './routes/Upload.js';
+import { uploadRouter } from './routes/upload.js';
 
 dotenv.config();
 
