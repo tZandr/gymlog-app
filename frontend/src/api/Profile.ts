@@ -1,20 +1,65 @@
-import api from './Client';
+import { supabase } from '../lib/supabaseClient';
 import type { IProfile } from '../types/Profile';
 
-// Get
-export const getProfile = () => {
-  return api.get<IProfile>('/profile').then((r) => r.data);
+interface ProfileRow {
+  id: string;
+  name: string | null;
+  age: number | null;
+  avatar_url: string | null;
+  role: 'client' | 'coach';
+}
+
+function mapProfile(row: ProfileRow): IProfile {
+  return {
+    _id: row.id,
+    name: row.name ?? '',
+    age: row.age ?? 0,
+    avatarUrl: row.avatar_url ?? null,
+    role: row.role,
+  };
+}
+
+async function currentUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const userId = data.session?.user.id;
+  if (!userId) throw new Error('Not logged in');
+  return userId;
+}
+
+export const getProfile = async (): Promise<IProfile> => {
+  const userId = await currentUserId();
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+  if (error) throw error;
+  return mapProfile(data);
 };
 
-// Update
-export const updateProfile = (data: Partial<IProfile>) => {
-  return api.put<IProfile>('/profile', data).then((r) => r.data);
+export const updateProfile = async (data: Partial<IProfile>): Promise<IProfile> => {
+  const userId = await currentUserId();
+  const payload: Record<string, unknown> = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.age !== undefined) payload.age = data.age;
+  if (data.avatarUrl !== undefined) payload.avatar_url = data.avatarUrl;
+
+  const { data: row, error } = await supabase
+    .from('profiles')
+    .update(payload)
+    .eq('id', userId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapProfile(row);
 };
 
-// Upload Avatar
-export const uploadAvatar = (file: File) => {
-  const form = new FormData();
-  form.append('file', file);
-  return api.post<{ url: string }>('/upload', form).then(r => r.data);
-};
+export const uploadAvatar = async (file: File): Promise<{ url: string }> => {
+  const userId = await currentUserId();
+  const path = `${userId}/${Date.now()}-${file.name}`;
 
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(path, file, { upsert: true });
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return { url: data.publicUrl };
+};

@@ -3,4 +3,5 @@ export interface IProfile {
   name: string;
   age: number;
   avatarUrl: string | null;
+  role: 'client' | 'coach';
 }
