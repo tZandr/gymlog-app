@@ -1,35 +1,47 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
-export default function Login() {
-  const { login } = useAuth();
+export default function Signup() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
+  const [checkEmail, setCheckEmail] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      await login(email, password);
-      navigate(from, { replace: true });
-    } catch {
-      setError("Incorrect email or password");
-    } finally {
-      setSubmitting(false);
+    // Everyone who signs up here is a plain user (profiles.role defaults to 'client' via
+    // the on_auth_user_created trigger). The coach role is only granted via a coach signup link.
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    setSubmitting(false);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
     }
+    if (data.session) {
+      navigate("/", { replace: true });
+    } else {
+      setCheckEmail(true);
+    }
+  }
+
+  if (checkEmail) {
+    return (
+      <div className="page-header">
+        <h5>Check your email</h5>
+        <p>Confirm your account, then log in.</p>
+      </div>
+    );
   }
 
   return (
     <div className="page-header">
-      <h5>Log in</h5>
+      <h5>Create account</h5>
       <form onSubmit={handleSubmit}>
         <label>
           Email
@@ -48,15 +60,16 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            autoComplete="current-password"
+            minLength={6}
+            autoComplete="new-password"
           />
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" className="btn-success" disabled={submitting}>
-          {submitting ? "Logging in..." : "Log in"}
+          {submitting ? "Creating account..." : "Create account"}
         </button>
         <p>
-          No account yet? <Link to="/signup">Create one</Link>
+          Already have an account? <Link to="/login">Log in</Link>
         </p>
       </form>
     </div>

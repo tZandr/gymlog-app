@@ -1,5 +1,8 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { FaUsers } from "react-icons/fa";
+import { FaArrowLeft, FaUsers } from "react-icons/fa";
+
+const linkClass = ({ isActive }: { isActive: boolean }) =>
+  `coach-sidebar__link${isActive ? " coach-sidebar__link--active" : ""}`;
 
 export default function CoachLayout() {
   return (
@@ -7,11 +10,11 @@ export default function CoachLayout() {
       <aside className="coach-sidebar">
         <div className="coach-sidebar__brand">GymLog Coach</div>
         <nav className="coach-sidebar__nav">
-          <NavLink
-            to="/coach/clients"
-            className={({ isActive }) => `coach-sidebar__link${isActive ? " coach-sidebar__link--active" : ""}`}
-          >
+          <NavLink to="/admin/clients" className={linkClass}>
             <FaUsers /> Clients
+          </NavLink>
+          <NavLink to="/" end className={linkClass}>
+            <FaArrowLeft /> Back to app
           </NavLink>
         </nav>
       </aside>

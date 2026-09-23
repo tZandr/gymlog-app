@@ -17,14 +17,15 @@ Drizzle schema, migrations, and one-time scripts for the Supabase Postgres backe
 8. `npm run run-sql user-provisioning.sql` — trigger that auto-creates a `profiles` row for every new signup.
 9. `npm run run-sql invite-preview.sql` — lets an unauthenticated visitor on a client invite link see who invited them before they have an account.
 10. `npm run run-sql coach-invites.sql` — RLS + functions for platform-level coach signup invites.
+11. `npm run run-sql client-sees-coach.sql` — lets a client read the profile of the coach they're linked to (for the `/client` dashboard).
 
-No accounts are created by any script from here on — everyone, including the very first coach and client, signs up through the app itself:
+No accounts are created by any script from here on — everyone signs up through the app itself. Anyone can create a plain account at `/signup` (a standalone training log); the coach role only comes from a coach signup link:
 
-11. `npm run create-coach-invite <email>` — prints a coach signup link (`/coach-signup/<token>`). This is how you onboard a new coach: send them this link when they buy in or want a demo. Run it once for yourself acting as the first coach.
-12. Open that link, sign up for real — that account is now a coach.
-13. Log in as that coach, go to Clients, and invite yourself (or whoever's real workout history you're migrating) as a client. Open the resulting `/invite/<token>` link and sign up for real.
-14. `npm run find-user <email>` — get that new client account's user id; put it in `.env` as `OWNER_USER_ID`.
-15. `npm run migrate-from-mongo` — one-time import of the existing MongoDB data (exercises, workouts, sets) onto that account.
+12. `npm run create-coach-invite <email>` — prints a coach signup link (`/coach-signup/<token>`). This is how you onboard a new coach: send them this link when they buy in or want a demo. Run it once for yourself acting as the first coach.
+13. Open that link, sign up for real — that account is now a coach, with a dashboard at `/admin/clients`.
+14. Log in as that coach, go to Clients, and invite yourself (or whoever's real workout history you're migrating) as a client. Open the resulting `/invite/<token>` link and sign up for real (or, if you already have an account, sign up with the invited email).
+15. `npm run find-user <email>` — get that new client account's user id; put it in `.env` as `OWNER_USER_ID`.
+16. `npm run migrate-from-mongo` — one-time import of the existing MongoDB data (exercises, workouts, sets) onto that account.
 
 ## If you change `schema.ts` later
 

@@ -34,7 +34,7 @@ export default function Invite() {
     return (
       <div className="page-header">
         <h5>You&apos;re in</h5>
-        <p>Your account is linked to {preview?.coachName ?? "your coach"}. Head to the app to get started.</p>
+        <p>Your account is linked to {preview?.coachName ?? "your coach"}. <a href="/client">Open your dashboard</a> to get started.</p>
       </div>
     );
   }

@@ -34,7 +34,8 @@ export default function CoachSignup() {
     return (
       <div className="page-header">
         <h5>You&apos;re set up</h5>
-        <p>Your coach account is ready. Log in to start inviting clients.</p>
+        {/* Plain anchor on purpose: forces a reload so the freshly granted coach role is picked up. */}
+        <p>Your coach account is ready. <a href="/admin/clients">Open your dashboard</a> to start inviting clients.</p>
       </div>
     );
   }

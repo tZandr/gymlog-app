@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { enablePushNotifications } from "../lib/push";
 
 export default function Settings() {
-  const { logout } = useAuth();
+  const { profile, logout } = useAuth();
+  const navigate = useNavigate();
   const [pushStatus, setPushStatus] = useState<"idle" | "enabling" | "enabled" | "error">("idle");
   const [pushError, setPushError] = useState<string | null>(null);
 
@@ -27,6 +29,18 @@ export default function Settings() {
       <div>
         <p>dark mode, language</p>
       </div>
+      <div className="section">
+        <button type="button" onClick={() => navigate("/client")}>
+          From your coach
+        </button>
+      </div>
+      {profile?.role === "coach" && (
+        <div className="section">
+          <button type="button" onClick={() => navigate("/admin/clients")}>
+            Coach dashboard
+          </button>
+        </div>
+      )}
       <div className="section">
         <button type="button" onClick={handleEnablePush} disabled={pushStatus === "enabling" || pushStatus === "enabled"}>
           {pushStatus === "enabled" ? "Notifications enabled" : pushStatus === "enabling" ? "Enabling..." : "Enable notifications"}
