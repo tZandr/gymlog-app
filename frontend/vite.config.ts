@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'GymLog',
-        short_name: 'GymLog',
-        description: 'Workout logging and training plans',
+        name: 'Bro Split',
+        short_name: 'Bro Split',
+        description: 'Coach–client training platform',
         theme_color: '#0f0f0f',
         background_color: '#0f0f0f',
         display: 'standalone',

@@ -1,6 +1,7 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import CoachLayout from './layouts/CoachLayout';
+import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import Exercises from './pages/Exercises';
@@ -9,36 +10,27 @@ import Settings from './pages/Settings';
 import History from './pages/History';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import Invite from './pages/Invite';
-import CoachSignup from './pages/CoachSignup';
-import Clients from './pages/coach/Clients';
+import ChooseUsername from './pages/ChooseUsername';
 import ClientDashboard from './pages/client/Dashboard';
+import ClientProgram from './pages/client/Program';
+import Clients from './pages/coach/Clients';
+import Programs from './pages/coach/Programs';
+import ProgramBuilder from './pages/coach/ProgramBuilder';
+import AdminOverview from './pages/admin/Overview';
+import AdminTeam from './pages/admin/Team';
 import { RequireAuth } from './components/RequireAuth';
-import { RequireRole } from './components/RequireRole';
+import { RequireAdmin } from './components/RequireAdmin';
 
 export const router = createBrowserRouter([
-  {
-    path: '/login',
-    element: <Login />,
-  },
-  {
-    path: '/signup',
-    element: <Signup />,
-  },
-  {
-    path: '/invite/:token',
-    element: <Invite />,
-  },
-  {
-    path: '/coach-signup/:token',
-    element: <CoachSignup />,
-  },
+  { path: '/login', element: <Login /> },
+  { path: '/signup', element: <Signup /> },
   {
     element: <RequireAuth />,
     children: [
+      { path: '/username', element: <ChooseUsername /> },
       {
-        // The base app: a standard training log for any signed-in user, connected
-        // to a coach or not. /client is the connected view inside it (phone layout).
+        // The base app: a standard training log for any signed-in user, connected to a coach or not.
+        // /client is the connected view inside it (phone layout), reachable by everyone and free.
         element: <MainLayout />,
         children: [
           { path: '/', element: <Home /> },
@@ -48,16 +40,31 @@ export const router = createBrowserRouter([
           { path: '/settings', element: <Settings /> },
           { path: '/history', element: <History /> },
           { path: '/client', element: <ClientDashboard /> },
+          { path: '/client/programs/:id', element: <ClientProgram /> },
         ],
       },
       {
-        // Coach dashboard (wide layout with sidebar), coaches only.
-        element: <RequireRole role="coach" />,
+        // Coach dashboard (wide layout with sidebar). Anyone can open it; without a coach plan
+        // the layout shows the paywall instead of the page (and the database refuses the actions).
+        path: '/coach',
+        element: <CoachLayout />,
+        children: [
+          { index: true, element: <Navigate to="/coach/clients" replace /> },
+          { path: 'clients', element: <Clients /> },
+          { path: 'programs', element: <Programs /> },
+          { path: 'programs/:id', element: <ProgramBuilder /> },
+        ],
+      },
+      {
+        // Platform admin. Admins only.
+        element: <RequireAdmin />,
         children: [
           {
-            element: <CoachLayout />,
+            path: '/admin',
+            element: <AdminLayout />,
             children: [
-              { path: '/admin/clients', element: <Clients /> },
+              { index: true, element: <AdminOverview /> },
+              { path: 'team', element: <AdminTeam /> },
             ],
           },
         ],

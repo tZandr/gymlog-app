@@ -1,0 +1,614 @@
+// Styles for the coach-client platform: auth screens, the coach and admin dashboards
+// (sidebar layout), the program builder and the client's program view.
+
+@use 'variables' as *;
+@use 'mixins' as *;
+
+$ctl: #6b6b6b; // borders of interactive controls (3:1 against the dark surfaces)
+$muted: #8a8a8a; // readable secondary text (the older $text-muted is too dim for body text)
+$accent-text: #ff6b76; // accent as text/links on dark backgrounds
+$split-client: #d0d0d0;
+$split-neither: #4a4a4a;
+
+/* ---------- utilities ---------- */
+
+.display {
+  font-family: 'Barlow Condensed', $main-font;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+}
+.page-title { margin: 0; font-size: 2.4rem; }
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $muted;
+}
+.muted { color: $muted; }
+.small { font-size: 0.8rem; }
+.block { display: block; }
+.grow { flex-grow: 1; min-width: 0; }
+
+.stack { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.stack--tight { gap: 0.5rem; }
+.row { display: flex; align-items: center; gap: 0.75rem; }
+.row--between { justify-content: space-between; }
+.row--end { align-items: flex-end; }
+.row--wrap { flex-wrap: wrap; }
+.row--baseline { align-items: baseline; }
+
+.card {
+  background: $bg-surface;
+  border: 1px solid $border;
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 0;
+  &__title {
+    margin: 0;
+    font-family: 'Barlow Condensed', $main-font;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 1.6rem;
+    line-height: 1.05;
+  }
+  p { margin: 0; }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: $text-secondary;
+  border: 1px solid $ctl;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  &--accent { color: $accent-text; border-color: $accent; }
+}
+
+.avatar-initials {
+  @include flex-center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: $bg-elevated;
+  border: 1px solid $border;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+  &--accepted { color: $success; }
+  &--pending { color: $warning; }
+  &--declined { color: $muted; }
+}
+
+.form-notice { color: $success; font-size: 0.9rem; }
+.field-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  &--ok { color: $success; }
+  &--bad { color: $accent-text; }
+  &--muted { color: $muted; }
+}
+
+/* ---------- buttons ---------- */
+
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary,
+a.btn-primary {
+  background: $accent-hover;
+  border-color: $accent-hover;
+  color: #fff;
+  &:hover { background: $accent; border-color: $accent; color: #fff; }
+}
+.btn-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid $ctl;
+  border-radius: 8px;
+  color: $text-primary;
+  font-weight: 600;
+  text-decoration: none;
+  &:hover { border-color: $accent; color: $accent; }
+}
+.btn-ghost { background: transparent; }
+.btn-small {
+  padding: 0.35rem 0.75rem;
+  min-height: 36px;
+  font-size: 0.85rem;
+  border-color: $ctl;
+  &--danger { color: $accent-text; border-color: $accent; }
+}
+.btn-danger-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: $accent-text;
+  border-color: $accent;
+}
+.btn-start { align-self: flex-start; }
+
+.pill {
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  border-color: $ctl;
+  &--active { background: $accent-hover; border-color: $accent-hover; color: #fff; }
+}
+
+/* ---------- fields (inside the platform pages) ---------- */
+
+%control {
+  width: 100%;
+  padding: 0.7rem;
+  background-color: $bg-elevated;
+  border: 1px solid $ctl;
+  border-radius: 8px;
+  color: $text-primary;
+  font-size: 0.95rem;
+  font-family: inherit;
+  &:focus { outline: none; border-color: $accent; }
+}
+
+.sidebar-layout__content,
+.auth-card {
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: $text-secondary;
+  }
+  label > input,
+  label > select,
+  label > textarea { @extend %control; }
+  textarea { resize: vertical; line-height: 1.4; }
+  a:not([class]) { color: $accent-text; }
+}
+
+.create-profile-form textarea {
+  @extend %control;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+// Client pages render straight inside #content, which has no top padding of its own.
+#content > .stack { padding-top: 1.5rem; }
+
+.at-input {
+  display: flex;
+  align-items: center;
+  background: $bg-elevated;
+  border: 1px solid $ctl;
+  border-radius: 8px;
+  &:focus-within { border-color: $accent; }
+  &__at { padding-left: 0.8rem; color: $accent-text; font-weight: 600; font-size: 1rem; }
+  input {
+    flex-grow: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: $text-primary;
+    font-size: 0.95rem;
+    font-family: inherit;
+    padding: 0.7rem 0.8rem 0.7rem 0.25rem;
+  }
+}
+
+.search-input {
+  width: 220px;
+  padding: 0.6rem 0.8rem;
+  background: $bg-elevated;
+  border: 1px solid $ctl;
+  border-radius: 8px;
+  color: $text-primary;
+  font-family: inherit;
+}
+
+/* ---------- auth ---------- */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: $bg-primary;
+  color: $text-primary;
+  font-family: $main-font;
+}
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 2rem;
+  background: $bg-surface;
+  border: 1px solid $border;
+  border-radius: 16px;
+  p { margin: 0; color: $text-secondary; }
+  a { color: $accent-text; }
+  &__brand { display: flex; flex-direction: column; gap: 0.25rem; }
+  &__name { font-family: 'Barlow Condensed', $main-font; font-weight: 700; text-transform: uppercase; font-size: 2rem; line-height: 1; }
+  &__tagline { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: $muted; font-weight: 600; }
+  &__title { margin: 0; font-size: 1.8rem; }
+  &__switch { text-align: center; font-size: 0.9rem; }
+}
+
+/* ---------- sidebar layout (coach + admin) ---------- */
+
+.sidebar-layout {
+  display: flex;
+  min-height: 100vh;
+  background: $bg-primary;
+  color: $text-primary;
+  font-family: $main-font;
+
+  &__sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    padding: 1.5rem 1rem;
+    background: $bg-surface;
+    border-right: 1px solid $border;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    align-self: flex-start;
+  }
+  &__brand { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; padding: 0 0.5rem; }
+  &__name { font-size: 1.9rem; }
+  &__tagline { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: $muted; font-weight: 600; }
+  &__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-grow: 1;
+    border-top: 0;
+    background: transparent;
+  }
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.7rem 0.75rem;
+    border-radius: 8px;
+    color: $text-secondary;
+    text-decoration: none;
+    font-weight: 500;
+    &:hover { color: $text-primary; background: $bg-elevated; }
+    &--active { color: $accent-text; background: $bg-elevated; }
+  }
+  &__label { flex-grow: 1; }
+  &__lock { font-size: 0.8rem; }
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid $border;
+  }
+  &__who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    font-size: 0.85rem;
+    span { color: $text-secondary; font-size: 0.75rem; }
+  }
+  &__content { flex: 1; min-width: 0; max-width: 1100px; padding: 2.5rem; box-sizing: border-box; }
+}
+
+@media (max-width: 820px) {
+  .sidebar-layout { flex-direction: column; }
+  .sidebar-layout__sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    padding: 0.75rem 1rem;
+    border-right: 0;
+    border-bottom: 1px solid $border;
+  }
+  .sidebar-layout__nav { flex-direction: row; flex-wrap: wrap; flex-grow: 0; }
+  .sidebar-layout__user { display: none; }
+  .sidebar-layout__content { padding: 1.25rem 1rem 3rem; }
+}
+
+.paywall {
+  max-width: 520px;
+  margin: 4rem auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  h1 { margin: 0; font-size: 2.2rem; }
+  p { margin: 0; color: $text-secondary; line-height: 1.5; }
+  &__icon {
+    @include flex-center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: $bg-elevated;
+    border: 1px solid $border;
+    color: $accent-text;
+  }
+  &__sent { color: $text-primary !important; font-weight: 600; }
+}
+
+/* ---------- tables + lists ---------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  th {
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $muted;
+    padding: 0 1rem 0.75rem 0;
+  }
+  td { padding: 0.85rem 1rem 0.85rem 0; border-top: 1px solid $border; vertical-align: middle; }
+  &__actions { text-align: right; white-space: nowrap; padding-right: 0; }
+}
+.program-row {
+  flex-wrap: wrap;
+  &__name {
+    font-family: 'Barlow Condensed', $main-font;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 1.5rem;
+    color: $text-primary;
+    text-decoration: none;
+    &:hover { color: $accent-text; }
+  }
+}
+.member-row { padding: 0.85rem 0; border-top: 1px solid $border; }
+
+/* ---------- admin overview ---------- */
+
+.overview {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  &__total { display: flex; flex-direction: column; min-width: 170px; }
+  &__number { font-size: 5rem; }
+  &__breakdown { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 1.25rem; }
+  &__legend {
+    gap: 1.5rem;
+    align-items: flex-start;
+    > div { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; font-weight: 600; font-size: 0.85rem; color: $text-secondary; }
+  }
+}
+.split-bar {
+  display: flex;
+  gap: 3px;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  &__seg { display: block; flex-basis: 0; min-width: 0; }
+  &__seg--coach { background: $accent; }
+  &__seg--client { background: $split-client; }
+  &__seg--neither { background: $split-neither; }
+}
+.legend-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 0.4rem;
+  border-radius: 3px;
+  &--coach { background: $accent; }
+  &--client { background: $split-client; }
+  &--neither { background: $split-neither; }
+}
+.legend-number { font-size: 2.6rem; color: $text-primary; }
+.stat-number { display: block; font-size: 3rem; }
+.stat-row { align-items: stretch; .card { display: flex; flex-direction: column; gap: 0.35rem; } }
+
+/* ---------- program builder ---------- */
+
+.builder {
+  &__name { display: flex; flex-direction: column; gap: 0.4rem; }
+  &__layout { display: flex; gap: 1.5rem; align-items: flex-start; }
+  &__rail { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem; }
+  &__editor { flex: 1; min-width: 0; }
+  &__send { width: 360px; flex-shrink: 0; }
+  &__layout--review > .stack { flex: 1; }
+  &__footer { border-top: 1px solid $border; padding-top: 1rem; gap: 1rem; flex-wrap: wrap; }
+}
+@media (max-width: 1000px) {
+  .builder__layout { flex-direction: column; align-items: stretch; }
+  .builder__rail, .builder__send { width: 100%; box-sizing: border-box; }
+}
+
+.rail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid $border;
+  border-radius: 10px;
+  &--active { border-color: $accent-hover; background: $bg-elevated; }
+  &--dragging { opacity: 0.4; }
+  &__grip { display: flex; padding: 0 0.25rem; color: $muted; cursor: grab; }
+  &__main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+    padding: 0.5rem;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: $text-primary;
+    font-weight: 400;
+  }
+  &__badge {
+    @include flex-center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: $bg-elevated;
+    color: $text-secondary;
+    font-size: 0.8rem;
+    font-weight: 600;
+    &--ready { background: $success; color: #0f0f0f; }
+    &--active { background: $accent-hover; color: #fff; }
+  }
+  &__text { display: flex; flex-direction: column; min-width: 0; strong { font-size: 0.95rem; } }
+  &__moves {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    button { padding: 0.2rem 0.4rem; border-color: $border; }
+  }
+}
+.bar {
+  height: 8px;
+  background: $bg-elevated;
+  border-radius: 4px;
+  &__fill { height: 100%; background: $accent-hover; border-radius: 4px; }
+}
+.rail__progress { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid $border; }
+
+.option-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-height: 100px;
+  padding: 1.1rem;
+  text-align: left;
+  span { color: $text-secondary; font-size: 0.85rem; font-weight: 400; line-height: 1.4; }
+  &--primary { border-color: $accent-hover; background: $bg-elevated; }
+}
+.start-day__options { align-items: stretch; }
+
+.ex-editor {
+  padding: 1.1rem;
+  background: #141414;
+  border: 1px solid $border;
+  border-radius: 12px;
+  &__specs { align-items: flex-end; flex-wrap: wrap; }
+  &__narrow { width: 96px; flex-shrink: 0; }
+}
+.ex-collapsed { padding: 0.85rem 0.25rem; border-top: 1px solid $border; }
+
+/* ---------- client: dashboard + program view (inside the phone layout) ---------- */
+
+.username-big { font-size: 2rem; color: $accent-text; text-transform: none; } // handles stay lowercase
+.program-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: $text-primary;
+  &:hover { border-color: $accent; }
+  &__name { font-size: 1.6rem; }
+}
+.settings-handle { text-align: center; color: $accent-text; font-weight: 600; }
+
+.day-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-top: 0;
+  background: transparent;
+}
+.day-tab {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-color: $ctl;
+  &--active { background: $accent-hover; border-color: $accent-hover; color: #fff; }
+}
+
+.prog-ex {
+  background: $bg-surface;
+  border: 1px solid $border;
+  border-radius: 12px;
+  &--open { border-color: $ctl; }
+  &__row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 56px;
+    padding: 0 1rem;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: $text-primary;
+  }
+  &__name { font-weight: 600; font-size: 1rem; }
+  &__right { display: inline-flex; align-items: center; gap: 0.65rem; white-space: nowrap; }
+  &__summary { font-family: 'Barlow Condensed', $main-font; font-weight: 700; text-transform: uppercase; font-size: 1.4rem; }
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0 1rem 1rem;
+    p { margin: 0; color: $text-secondary; font-size: 0.9rem; strong { color: $text-primary; } }
+  }
+}
+.pinned {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  background: $bg-elevated;
+  border: 1px solid $border;
+  border-radius: 8px;
+  &__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $accent-text;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  &__link { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 44px; color: $accent-text; font-weight: 600; }
+}
+.prog-ex__body .pinned p { color: $text-primary; }
