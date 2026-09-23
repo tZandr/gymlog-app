@@ -1,12 +1,16 @@
 import { uploadAvatar, updateProfile } from '../api/Profile';
 import { useProfile } from '../hooks/useProfile';
+import { useAuth } from '../hooks/useAuth';
 import { useState, useEffect } from 'react';
 import { FaUser } from 'react-icons/fa';
 
 export default function EditProfile({ onSaved }: { onSaved?: () => void }) {
   const { profile, setProfile } = useProfile();
+  const { access, refresh } = useAuth();
   const [name, setName] = useState<string>('');
   const [age, setAge] = useState<number>(0);
+  const [bio, setBio] = useState<string>('');
+  const [tags, setTags] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -14,6 +18,8 @@ export default function EditProfile({ onSaved }: { onSaved?: () => void }) {
     if (profile) {
       setName(profile.name ?? '');
       setAge(profile.age ?? 0);
+      setBio(profile.bio ?? '');
+      setTags((profile.coachTags ?? []).join(', '));
     }
   }, [profile]);
 
@@ -26,8 +32,12 @@ export default function EditProfile({ onSaved }: { onSaved?: () => void }) {
         const result = await uploadAvatar(file);
         avatarUrl = result.url;
       }
-      const updated = await updateProfile({ name, age, avatarUrl });
+      const coachFields = access.coach
+        ? { bio, coachTags: tags.split(',').map((t) => t.trim()).filter(Boolean) }
+        : {};
+      const updated = await updateProfile({ name, age, avatarUrl, ...coachFields });
       setProfile(updated);
+      await refresh();
       onSaved?.();
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -94,6 +104,19 @@ export default function EditProfile({ onSaved }: { onSaved?: () => void }) {
         onChange={(e) => setAge(Number(e.target.value))}
         placeholder="Age"
       />
+
+      {access.coach && (
+        <>
+          <label htmlFor="bio">
+            Coach bio <small>(shown in the coach directory)</small>
+          </label>
+          <textarea id="bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} />
+          <label htmlFor="tags">
+            Specialties <small>(comma separated, e.g. Strength, Bodybuilding)</small>
+          </label>
+          <input type="text" id="tags" value={tags} onChange={(e) => setTags(e.target.value)} />
+        </>
+      )}
 
       <button type="submit">Save</button>
     </form>

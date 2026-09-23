@@ -3,19 +3,25 @@ import type { IProfile } from '../types/Profile';
 
 interface ProfileRow {
   id: string;
+  username: string | null;
   name: string | null;
   age: number | null;
   avatar_url: string | null;
-  role: 'client' | 'coach';
+  bio: string | null;
+  coach_tags: string[] | null;
+  is_admin: boolean;
 }
 
 function mapProfile(row: ProfileRow): IProfile {
   return {
     _id: row.id,
+    username: row.username,
     name: row.name ?? '',
     age: row.age ?? 0,
     avatarUrl: row.avatar_url ?? null,
-    role: row.role,
+    bio: row.bio ?? '',
+    coachTags: row.coach_tags ?? [],
+    isAdmin: row.is_admin,
   };
 }
 
@@ -36,10 +42,13 @@ export const getProfile = async (): Promise<IProfile> => {
 
 export const updateProfile = async (data: Partial<IProfile>): Promise<IProfile> => {
   const userId = await currentUserId();
+  // Only these columns are writable by the app; the database refuses anything else.
   const payload: Record<string, unknown> = {};
   if (data.name !== undefined) payload.name = data.name;
   if (data.age !== undefined) payload.age = data.age;
   if (data.avatarUrl !== undefined) payload.avatar_url = data.avatarUrl;
+  if (data.bio !== undefined) payload.bio = data.bio;
+  if (data.coachTags !== undefined) payload.coach_tags = data.coachTags;
 
   const { data: row, error } = await supabase
     .from('profiles')

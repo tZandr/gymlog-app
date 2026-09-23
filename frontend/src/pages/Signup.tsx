@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { isUsernameAvailable, normalizeUsername, validateUsername } from "../api/username";
+import { AuthShell } from "../components/platform/AuthShell";
+import { UsernameField } from "../components/platform/UsernameField";
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -13,45 +17,55 @@ export default function Signup() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSubmitting(true);
-    // Everyone who signs up here is a plain user (profiles.role defaults to 'client' via
-    // the on_auth_user_created trigger). The coach role is only granted via a coach signup link.
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-    setSubmitting(false);
 
-    if (signUpError) {
-      setError(signUpError.message);
+    const formatError = validateUsername(username);
+    if (formatError) {
+      setError(formatError);
       return;
     }
-    if (data.session) {
-      navigate("/", { replace: true });
-    } else {
-      setCheckEmail(true);
+
+    setSubmitting(true);
+    try {
+      const name = normalizeUsername(username);
+      if (!(await isUsernameAvailable(name))) {
+        setError(`@${name} is taken`);
+        return;
+      }
+      // The username rides along as signup metadata; a database trigger stores it on the profile.
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username: name } },
+      });
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      if (data.session) navigate("/", { replace: true });
+      else setCheckEmail(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   if (checkEmail) {
     return (
-      <div className="page-header">
-        <h5>Check your email</h5>
+      <AuthShell title="Check your email">
         <p>Confirm your account, then log in.</p>
-      </div>
+        <Link to="/login">Go to log in</Link>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="page-header">
-      <h5>Create account</h5>
+    <AuthShell title="Create your account">
       <form onSubmit={handleSubmit}>
+        <UsernameField value={username} onChange={setUsername} />
         <label>
           Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="username"
-          />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         </label>
         <label>
           Password
@@ -65,13 +79,13 @@ export default function Signup() {
           />
         </label>
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="btn-success" disabled={submitting}>
+        <button type="submit" className="btn-primary" disabled={submitting}>
           {submitting ? "Creating account..." : "Create account"}
         </button>
-        <p>
+        <p className="auth-card__switch">
           Already have an account? <Link to="/login">Log in</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

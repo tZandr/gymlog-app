@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { AuthShell } from "../components/platform/AuthShell";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +17,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate(from, { replace: true });
+      navigate("/", { replace: true });
     } catch {
       setError("Incorrect email or password");
     } finally {
@@ -28,18 +26,11 @@ export default function Login() {
   }
 
   return (
-    <div className="page-header">
-      <h5>Log in</h5>
+    <AuthShell title="Log in">
       <form onSubmit={handleSubmit}>
         <label>
           Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="username"
-          />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
         </label>
         <label>
           Password
@@ -52,13 +43,13 @@ export default function Login() {
           />
         </label>
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" className="btn-success" disabled={submitting}>
+        <button type="submit" className="btn-primary" disabled={submitting}>
           {submitting ? "Logging in..." : "Log in"}
         </button>
-        <p>
+        <p className="auth-card__switch">
           No account yet? <Link to="/signup">Create one</Link>
         </p>
       </form>
-    </div>
+    </AuthShell>
   );
 }

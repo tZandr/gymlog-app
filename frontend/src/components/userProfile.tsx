@@ -14,6 +14,7 @@ export function UserProfile() {
         </div>
       )}
       <h2>{profile?.name}</h2>
+      {profile?.username && <span className="settings-handle">@{profile.username}</span>}
     </div>
   );
 }
