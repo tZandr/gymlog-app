@@ -1,0 +1,29 @@
+{
+  "name": "gymlog-db",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio",
+    "run-sql": "tsx run-sql.ts",
+    "create-coach-invite": "tsx create-coach-invite.ts",
+    "find-user": "tsx find-user.ts",
+    "migrate-from-mongo": "tsx migrate-from-mongo.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.44.6",
+    "mongodb": "^7.2.0",
+    "mongoose": "^9.6.2",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "drizzle-kit": "^0.31.6",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
