@@ -22,6 +22,20 @@
       "when": 1788275531695,
       "tag": "0002_striped_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790191983792,
+      "tag": "0003_classy_stepford_cuckoos",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790192018463,
+      "tag": "0004_needy_sersi",
+      "breakpoints": true
     }
   ]
 }

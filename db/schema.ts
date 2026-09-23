@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -19,10 +20,16 @@ export const authUsers = authSchema.table('users', {
 
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().references(() => authUsers.id, { onDelete: 'cascade' }),
+  // Lowercase handle without the leading '@' (the UI shows it as @username). Unique, format-checked in SQL.
+  username: text('username'),
   name: text('name'),
   age: integer('age'),
   avatarUrl: text('avatar_url'),
-  role: text('role', { enum: ['client', 'coach'] }).notNull().default('client'),
+  bio: text('bio'),
+  // Shown in the coach directory.
+  coachTags: text('coach_tags').array().notNull().default([]),
+  // Set only by the admin bootstrap script or an accepted admin invite -- never writable from the app.
+  isAdmin: boolean('is_admin').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -70,31 +77,77 @@ export const sets = pgTable('sets', {
 
 export const coachClientLinks = pgTable('coach_client_links', {
   id: uuid('id').primaryKey().defaultRandom(),
-  coachId: uuid('coach_id').notNull().default(sql`auth.uid()`).references(() => profiles.id, { onDelete: 'cascade' }),
-  // Nullable until the invite is accepted -- at invite time we only know the email.
-  clientId: uuid('client_id').references(() => profiles.id, { onDelete: 'cascade' }),
-  clientEmail: text('client_email').notNull(),
-  inviteToken: uuid('invite_token').notNull().defaultRandom().unique(),
-  status: text('status', { enum: ['pending', 'accepted', 'revoked'] }).notNull().default('pending'),
+  coachId: uuid('coach_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  clientId: uuid('client_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  // A coach invites a client by @username; the client accepts or declines in their dashboard.
+  status: text('status', { enum: ['pending', 'accepted', 'declined'] }).notNull().default('pending'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   acceptedAt: timestamp('accepted_at', { withTimezone: true }),
-});
-
-// Platform-level invites for onboarding a new coach (you send this link when a
-// coach buys in or wants a demo). Deliberately separate from coach_client_links,
-// which is a coach inviting their own clients -- this is one level up.
-export const coachInvites = pgTable('coach_invites', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email').notNull(),
-  inviteToken: uuid('invite_token').notNull().defaultRandom().unique(),
-  status: text('status', { enum: ['pending', 'accepted', 'revoked'] }).notNull().default('pending'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  acceptedAt: timestamp('accepted_at', { withTimezone: true }),
-});
+}, (t) => [unique('coach_client_links_pair_key').on(t.coachId, t.clientId)]);
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().default(sql`auth.uid()`).references(() => profiles.id, { onDelete: 'cascade' }),
   subscription: jsonb('subscription').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Coach tools are paywalled: a row here (not expired) is what grants access. 'granted' rows are
+// created by an admin; 'paid' rows will be created by the payment integration.
+export const coachSubscriptions = pgTable('coach_subscriptions', {
+  userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  source: text('source', { enum: ['granted', 'paid'] }).notNull(),
+  grantedBy: uuid('granted_by').references(() => profiles.id, { onDelete: 'set null' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Someone without coach access asking an admin to be let in.
+export const coachAccessRequests = pgTable('coach_access_requests', {
+  userId: uuid('user_id').primaryKey().references(() => profiles.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// An admin inviting an existing user to become an admin; the invitee accepts in their Settings.
+export const adminInvites = pgTable('admin_invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  invitedUserId: uuid('invited_user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  invitedBy: uuid('invited_by').references(() => profiles.id, { onDelete: 'set null' }),
+  status: text('status', { enum: ['pending', 'accepted', 'declined'] }).notNull().default('pending'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// A program is a named list of days. It starts as a coach's draft (client_id null) and is
+// 'sent' to one accepted client; later edits by the coach show up for the client live.
+export const programs = pgTable('programs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  coachId: uuid('coach_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  clientId: uuid('client_id').references(() => profiles.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  status: text('status', { enum: ['draft', 'sent'] }).notNull().default('draft'),
+  message: text('message'),
+  sentAt: timestamp('sent_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const programDays = pgTable('program_days', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  programId: uuid('program_id').notNull().references(() => programs.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  position: integer('position').notNull(),
+});
+
+export const programExercises = pgTable('program_exercises', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  dayId: uuid('day_id').notNull().references(() => programDays.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull(),
+  name: text('name').notNull(),
+  // reps/rest are free text on purpose: '6–8', '30–45 s', '2–3 min'.
+  sets: integer('sets'),
+  reps: text('reps'),
+  rest: text('rest'),
+  feeder: text('feeder'),
+  comment: text('comment'),
+  link: text('link'),
 });

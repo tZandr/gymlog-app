@@ -1,45 +1,38 @@
 # db
 
-Drizzle schema, migrations, and one-time scripts for the Supabase Postgres backend. This package is dev/setup tooling only — nothing here runs as a live server; the frontend talks to Supabase directly.
+Drizzle schema, migrations, SQL and scripts for the Supabase Postgres backend. This package is dev/setup tooling only — nothing here runs as a live server; the frontend talks to Supabase directly and Row Level Security (RLS) plus the functions in `platform.sql` are what protect the data.
 
-## One-time setup
+## The model in one paragraph
+
+Anyone can sign up (with a unique `@username`). **Coach tools are paywalled in the database**: a user has coach access only while they have a row in `coach_subscriptions` (created by an admin today, by payments later). **Clients are free.** A coach invites a client by `@username`; the client accepts or declines in their dashboard. A coach builds a **program** (a named list of days of exercises), then sends it to one accepted client. **Admins** (a flag on `profiles`) grant/revoke coach access and invite other admins. Nothing coach/admin/subscription related is writable directly from the app: it all goes through `security definer` functions that check who is calling.
+
+## Fresh setup
 
 1. Create a Supabase project at supabase.com.
-2. Copy `.env.example` to `.env` and fill in:
-   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — Project Settings -> API.
-   - `DATABASE_URL` — Project Settings -> Database -> Connection string -> URI.
-   - `MONGO_URI` — same value as `backend/.env`, only needed once for the data migration.
+2. Copy `.env.example` to `.env` and fill in `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (Project Settings → API / Database). `MONGO_URI` is only needed for the one-time import of old data.
 3. `npm install`
-4. `npm run push` — creates all tables in Supabase from `schema.ts`.
-5. `npm run run-sql rls.sql` — applies the RLS policies.
-6. `npm run run-sql storage.sql` — creates the `avatars` bucket and its folder-scoped policies.
-7. `npm run run-sql coach-client.sql` — creates the coach-client invite/link table's policies, the `accept_coach_invite` function, and the coach-read policies on profiles/workouts/workout_exercises/sets.
-8. `npm run run-sql user-provisioning.sql` — trigger that auto-creates a `profiles` row for every new signup.
-9. `npm run run-sql invite-preview.sql` — lets an unauthenticated visitor on a client invite link see who invited them before they have an account.
-10. `npm run run-sql coach-invites.sql` — RLS + functions for platform-level coach signup invites.
-11. `npm run run-sql client-sees-coach.sql` — lets a client read the profile of the coach they're linked to (for the `/client` dashboard).
+4. Apply the migrations in order: `npm run run-sql migrations/0000_*.sql`, then `0001`, `0002`, `0003`, `0004` (see gotchas below for why not `push`).
+5. `npm run run-sql rls.sql` — RLS for the core tables (profiles, exercises, workouts, sets, push subscriptions).
+6. `npm run run-sql storage.sql` — the `avatars` bucket and its policies.
+7. `npm run run-sql platform.sql` — usernames, the coach paywall, invites, programs and the admin area (safe to re-run).
+8. `npm run smoke-test` — signs in as throwaway users and checks the security model end to end (creates and deletes `@smoke_*` users). Run it after any change to `platform.sql`.
+9. Sign up in the app with your username, then `npm run make-admin <username>` to make yourself the first admin. From then on, admins invite admins at `/admin/team`.
+10. Optional: `npm run find-user <email>` then `npm run migrate-from-mongo` to import the old MongoDB history onto an account (set `OWNER_USER_ID` in `.env`).
 
-No accounts are created by any script from here on — everyone signs up through the app itself. Anyone can create a plain account at `/signup` (a standalone training log); the coach role only comes from a coach signup link:
+## Changing the schema
 
-12. `npm run create-coach-invite <email>` — prints a coach signup link (`/coach-signup/<token>`). This is how you onboard a new coach: send them this link when they buy in or want a demo. Run it once for yourself acting as the first coach.
-13. Open that link, sign up for real — that account is now a coach, with a dashboard at `/admin/clients`.
-14. Log in as that coach, go to Clients, and invite yourself (or whoever's real workout history you're migrating) as a client. Open the resulting `/invite/<token>` link and sign up for real (or, if you already have an account, sign up with the invited email).
-15. `npm run find-user <email>` — get that new client account's user id; put it in `.env` as `OWNER_USER_ID`.
-16. `npm run migrate-from-mongo` — one-time import of the existing MongoDB data (exercises, workouts, sets) onto that account.
+Edit `schema.ts`, `npm run generate`, review the new file in `migrations/`, apply it with `npm run run-sql migrations/<file>.sql`. Gotchas found while building this:
 
-## If you change `schema.ts` later
+- **Don't mix drops and adds in one `generate`.** drizzle-kit asks interactively whether a dropped column/table was "renamed" to a new one, which can't be answered from a script. Do the drops as one migration, then the adds as another (that's what `0003` and `0004` are).
+- **`auth.users` reference**: `schema.ts` references Supabase's own `auth.users` table (for `profiles.id`) so TypeScript can check the relationship, but Supabase owns that table. The first migration had its `CREATE TABLE "auth"."users"` statement removed by hand; the tracked snapshot already reflects that.
+- **`drizzle-kit push` can crash** on this project (`TypeError: Cannot read properties of undefined (reading 'replace')`), so migrations are applied with `run-sql` instead.
+- Policies and functions live in the `.sql` files, not in `schema.ts`.
 
-`npm run generate` produces a new SQL migration by diffing against `migrations/meta/`. Two gotchas found while building this:
+## Files
 
-- **`auth.users` reference**: `schema.ts` references Supabase's own `auth.users` table (for the `profiles.id` foreign key) so Drizzle/TypeScript can type-check the relationship, but that table already exists and is managed by Supabase Auth. The very first migration had its `CREATE TABLE "auth"."users"` statement manually removed for that reason (see `migrations/0000_*.sql`); the tracked snapshot already reflects that, so this shouldn't recur unless the `auth.users` stub definition itself changes.
-- **`drizzle-kit push` can crash** on this project (`TypeError: Cannot read properties of undefined (reading 'replace')`, inside its own live-introspection diffing) once there's enough schema in place. If that happens, use `npm run generate` instead to produce a migration file, review it, then apply it with `npm run run-sql migrations/<file>.sql` — that's the path that's actually been used here since the second migration.
-
-## Scripts
-
-- `npm run push` — push `schema.ts` straight to the database. Works for a from-scratch database; see the `drizzle-kit push` gotcha above if it starts crashing.
-- `npm run generate` — generate a versioned SQL migration file instead of pushing directly (safer once there's real data, and the current workaround for the `push` crash).
-- `npm run studio` — Drizzle Studio, a GUI for browsing the database.
-- `npm run run-sql <file.sql>` — apply a raw SQL file against `DATABASE_URL` (used for `rls.sql`/`storage.sql`/etc., no `psql` install required).
-- `npm run create-coach-invite <email>` — print a platform-level coach signup link for onboarding a new coach.
-- `npm run find-user <email>` — look up a user's id by email (needed since Supabase Auth has no direct email lookup).
-- `npm run migrate-from-mongo` — one-time import from the old MongoDB data.
+- `schema.ts`, `migrations/` — tables (Drizzle).
+- `rls.sql`, `storage.sql` — base RLS and avatar storage.
+- `platform.sql` — the security model and all functions (usernames, paywall, invites, programs, admin).
+- `run-sql.ts` — apply any `.sql` file against `DATABASE_URL`.
+- `smoke-test.ts` — end-to-end security checks against the live project.
+- `make-admin.ts`, `find-user.ts`, `migrate-from-mongo.ts` — one-off helpers.

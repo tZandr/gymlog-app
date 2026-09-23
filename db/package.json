@@ -8,9 +8,10 @@
     "push": "drizzle-kit push",
     "studio": "drizzle-kit studio",
     "run-sql": "tsx run-sql.ts",
-    "create-coach-invite": "tsx create-coach-invite.ts",
     "find-user": "tsx find-user.ts",
-    "migrate-from-mongo": "tsx migrate-from-mongo.ts"
+    "migrate-from-mongo": "tsx migrate-from-mongo.ts",
+    "smoke-test": "tsx smoke-test.ts",
+    "make-admin": "tsx make-admin.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.58.0",
