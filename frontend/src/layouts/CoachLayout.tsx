@@ -1,26 +1,21 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { FaArrowLeft, FaUsers } from "react-icons/fa";
-
-const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `coach-sidebar__link${isActive ? " coach-sidebar__link--active" : ""}`;
+import { FaArrowLeft, FaClipboardList, FaUsers } from "react-icons/fa";
+import { useAuth } from "../hooks/useAuth";
+import { CoachPaywall } from "../components/platform/CoachPaywall";
+import SidebarLayout from "./SidebarLayout";
 
 export default function CoachLayout() {
+  const { access } = useAuth();
+  const locked = !access.coach;
+
   return (
-    <div className="coach-layout">
-      <aside className="coach-sidebar">
-        <div className="coach-sidebar__brand">GymLog Coach</div>
-        <nav className="coach-sidebar__nav">
-          <NavLink to="/admin/clients" className={linkClass}>
-            <FaUsers /> Clients
-          </NavLink>
-          <NavLink to="/" end className={linkClass}>
-            <FaArrowLeft /> Back to app
-          </NavLink>
-        </nav>
-      </aside>
-      <main className="coach-content">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarLayout
+      items={[
+        { to: "/coach/clients", label: "Clients", icon: <FaUsers />, locked },
+        { to: "/coach/programs", label: "Programs", icon: <FaClipboardList />, locked },
+        { to: "/", label: "Back to app", icon: <FaArrowLeft />, end: true },
+      ]}
+      footerSub={locked ? "No coach plan" : "Coach plan active"}
+      gate={locked ? <CoachPaywall /> : undefined}
+    />
   );
 }

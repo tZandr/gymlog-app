@@ -1,98 +1,139 @@
-import { useEffect, useState } from "react";
-import { getClients, inviteClient } from "../../api/coachClients";
-import type { ICoachClientLink } from "../../types/CoachClientLink";
+import { useCallback, useEffect, useState } from "react";
+import { getClients, inviteClient, removeLink } from "../../api/coachClients";
+import { normalizeUsername, validateUsername } from "../../api/username";
+import type { ICoachClient } from "../../types/Platform";
 
-function inviteUrl(token: string) {
-  return `${window.location.origin}/invite/${token}`;
-}
+const STATUS_LABEL: Record<ICoachClient["status"], string> = {
+  accepted: "Connected",
+  pending: "Invite pending",
+  declined: "Declined",
+};
+
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 
 export default function Clients() {
-  const [clients, setClients] = useState<ICoachClientLink[]>([]);
+  const [clients, setClients] = useState<ICoachClient[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newInvite, setNewInvite] = useState<ICoachClientLink | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    getClients()
-      .then(setClients)
-      .finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    try {
+      setClients(await getClients());
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  async function handleAdd(e: React.FormEvent) {
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
+    setNotice(null);
+    const formatError = validateUsername(username);
+    if (formatError) {
+      setError(formatError);
+      return;
+    }
+    setSubmitting(true);
     try {
-      const link = await inviteClient(email.trim());
-      setClients((prev) => [link, ...prev]);
-      setNewInvite(link);
-      setEmail("");
+      await inviteClient(username);
+      setNotice(`Invite sent to @${normalizeUsername(username)}. They'll see it in their client dashboard.`);
+      setUsername("");
+      await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create invite");
+      setError(err instanceof Error ? err.message : "Could not send the invite");
     } finally {
       setSubmitting(false);
     }
   }
 
+  async function handleRemove(client: ICoachClient) {
+    const message =
+      client.status === "accepted"
+        ? `Remove @${client.username} as a client? They keep any programs you already sent.`
+        : `Cancel the invite to @${client.username}?`;
+    if (!window.confirm(message)) return;
+    try {
+      await removeLink(client.linkId);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove");
+    }
+  }
+
   return (
-    <div>
-      <div className="page-header">
-        <h5>Clients</h5>
-      </div>
+    <div className="stack">
+      <h1 className="display page-title">Clients</h1>
 
-      <div className="section">
-        <form onSubmit={handleAdd} className="coach-invite-form">
-          <label>
-            Add new client
-            <input
-              type="email"
-              placeholder="client@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+      <form className="card stack stack--tight" onSubmit={handleInvite}>
+        <div>
+          <h2 className="card__title">Invite a client</h2>
+          <p className="muted">Enter their @username. The invite appears in their client dashboard — no email or link needed.</p>
+        </div>
+        <div className="row row--end">
+          <label className="grow">
+            Client username
+            <span className="at-input">
+              <span className="at-input__at">@</span>
+              <input
+                type="text"
+                value={username.replace(/^@+/, "")}
+                onChange={(e) => setUsername(e.target.value)}
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+              />
+            </span>
           </label>
-          <button type="submit" className="btn-success" disabled={submitting}>
-            {submitting ? "Creating invite..." : "Send invite"}
+          <button type="submit" className="btn-primary" disabled={submitting}>
+            {submitting ? "Sending..." : "Send invite"}
           </button>
-        </form>
+        </div>
         {error && <p className="form-error">{error}</p>}
-        {newInvite && (
-          <div className="coach-invite-link">
-            <p>Invite created for {newInvite.clientEmail} — share this link with them:</p>
-            <div className="coach-invite-link__row">
-              <input type="text" readOnly value={inviteUrl(newInvite.inviteToken)} />
-              <button
-                type="button"
-                onClick={() => navigator.clipboard.writeText(inviteUrl(newInvite.inviteToken))}
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        {notice && <p className="form-notice">{notice}</p>}
+      </form>
 
-      <div className="section">
+      <div className="card">
         {loading ? (
           <p>Loading clients...</p>
         ) : clients.length === 0 ? (
-          <div className="empty-state">
-            <p>No clients yet. Add one above to send their first invite.</p>
-          </div>
+          <p className="muted">No clients yet. Invite one above.</p>
         ) : (
-          <div className="coach-client-list">
-            {clients.map((client) => (
-              <div key={client._id} className="coach-client-list__row">
-                <span>{client.clientEmail}</span>
-                <span className={`tag coach-client-list__status coach-client-list__status--${client.status}`}>
-                  {client.status}
-                </span>
-              </div>
-            ))}
-          </div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Client</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map((client) => (
+                <tr key={client.linkId}>
+                  <td>
+                    <strong>@{client.username}</strong>
+                    {client.name && <span className="muted block">{client.name}</span>}
+                  </td>
+                  <td>
+                    <span className={`status status--${client.status}`}>{STATUS_LABEL[client.status]}</span>
+                  </td>
+                  <td className="muted">{formatDate(client.acceptedAt ?? client.createdAt)}</td>
+                  <td className="table__actions">
+                    <button type="button" className="btn-small" onClick={() => void handleRemove(client)}>
+                      {client.status === "accepted" ? "Remove" : "Cancel invite"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
