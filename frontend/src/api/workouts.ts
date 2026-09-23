@@ -156,3 +156,64 @@ export const deleteSet = async (_workoutId: string, _exerciseId: string, setId: 
   const { error } = await supabase.from('sets').delete().eq('id', setId);
   if (error) throw error;
 };
+
+export interface ProgramDayItem {
+  name: string;
+  sets: number | null;
+  reps: string;
+}
+
+/**
+ * Turns a coach's program day into a workout ready to log: one workout, its exercises
+ * (matched to the shared exercise catalog by name, created if missing) and empty sets.
+ */
+export const startWorkoutFromDay = async (dayName: string, items: ProgramDayItem[]): Promise<string> => {
+  const { data: catalog, error: catalogError } = await supabase.from('exercises').select('id, name');
+  if (catalogError) throw catalogError;
+  const byName = new Map((catalog ?? []).map((e: { id: string; name: string }) => [e.name.toLowerCase(), e.id]));
+
+  const missing = [...new Set(items.map((i) => i.name).filter((n) => !byName.has(n.toLowerCase())))];
+  if (missing.length > 0) {
+    const { data: created, error: createError } = await supabase
+      .from('exercises')
+      .insert(missing.map((name) => ({ name, muscle_groups: [], category: [] })))
+      .select('id, name');
+    if (createError) throw createError;
+    (created ?? []).forEach((e: { id: string; name: string }) => byName.set(e.name.toLowerCase(), e.id));
+  }
+
+  const { data: workout, error: workoutError } = await supabase
+    .from('workouts')
+    .insert({ name: dayName, date: new Date().toISOString() })
+    .select('id')
+    .single();
+  if (workoutError) throw workoutError;
+
+  const { data: rows, error: rowsError } = await supabase
+    .from('workout_exercises')
+    .insert(
+      items.map((i) => ({
+        workout_id: workout.id,
+        exercise_id: byName.get(i.name.toLowerCase()),
+        exercise_name: i.name,
+      })),
+    )
+    .select('id');
+  if (rowsError) throw rowsError;
+
+  const sets = (rows ?? []).flatMap((row: { id: string }, index: number) => {
+    const item = items[index];
+    const reps = Number(item.reps.match(/\d+/)?.[0] ?? 0);
+    return Array.from({ length: Math.max(1, item.sets ?? 1) }, () => ({
+      workout_exercise_id: row.id,
+      reps,
+      weight: 0,
+    }));
+  });
+  if (sets.length > 0) {
+    const { error: setsError } = await supabase.from('sets').insert(sets);
+    if (setsError) throw setsError;
+  }
+
+  return workout.id as string;
+};
